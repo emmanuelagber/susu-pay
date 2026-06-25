@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design Tokens ──────────────────────────────────────────── */
+:root {
+  --color-bg:            #0B1929;
+  --color-surface:       #122035;
+  --color-surface-alt:   #1A2D41;
+  --color-border:        #1A3048;
+  --color-border-light:  #243B55;
+  --color-green:         #00C78C;
+  --color-green-dim:     #008F64;
+  --color-green-bg:      #062317;
+  --color-amber:         #F59E0B;
+  --color-amber-bg:      #2A1A04;
+  --color-blue:          #4B7CF3;
+  --color-blue-dim:      #3060D0;
+  --color-text-primary:  #EFF4F9;
+  --color-text-secondary:#7B96B0;
+  --color-text-muted:    #4A6B85;
+  --color-danger:        #EF4444;
+  --color-danger-bg:     #2A0A0A;
+}
+
+/* ─── Base ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { height: 100%; }
+
+body {
+  height: 100%;
+  margin: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root { height: 100%; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+/* ─── Form elements ──────────────────────────────────────────── */
+select option { background: var(--color-surface); color: var(--color-text-primary); }
+
+/* ─── Focus visible ──────────────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+
+/* ─── Motion preference ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ─── Tabular numbers everywhere digits align ───────────────── */
+.tabular { font-variant-numeric: tabular-nums; }
