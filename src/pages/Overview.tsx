@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { apiGetStats, apiGetChartData, apiGetCircles } from '../lib/api'
+import { apiGetOverview, apiGetReports, apiGetCircles } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { StatCard } from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
@@ -13,7 +13,8 @@ import { PlusIcon, ArrowRightIcon } from '../components/ui/Icons'
 import { chartColors } from '../tokens'
 import type { Circle } from '../types'
 
-function fmt(n: number) {
+function fmt(n?: number | null) {
+  if (n === null || n === undefined) return '—'
   return '₦' + n.toLocaleString('en-NG')
 }
 
@@ -78,12 +79,24 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function Overview() {
-  const { user } = useAuth()
+  const { user, accessToken } = useAuth()
   const navigate = useNavigate()
 
-  const { data: stats } = useQuery({ queryKey: ['stats'], queryFn: apiGetStats })
-  const { data: chartData } = useQuery({ queryKey: ['chart'], queryFn: apiGetChartData })
-  const { data: circles } = useQuery({ queryKey: ['circles'], queryFn: apiGetCircles })
+  const { data: stats } = useQuery({
+    queryKey: ['stats', user?.id],
+    queryFn: () => user && accessToken ? apiGetOverview(user.id, accessToken) : Promise.resolve(null as any),
+    enabled: !!user && !!accessToken,
+  })
+  const { data: chartData } = useQuery({
+    queryKey: ['chart', user?.id],
+    queryFn: () => user && accessToken ? apiGetReports(user.id, accessToken) : Promise.resolve([]),
+    enabled: !!user && !!accessToken,
+  })
+  const { data: circles } = useQuery({
+     queryKey: ['circles', user?.id],
+     queryFn: () => user && accessToken ? apiGetCircles(user.id, accessToken!, 1, 20) : Promise.resolve([]),
+    enabled: !!accessToken,
+  })
 
   const greeting = () => {
     const h = new Date().getHours()
@@ -191,8 +204,10 @@ export default function Overview() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {circles?.map(c => <CircleRow key={c.id} circle={c} />) ?? (
-              <p className="text-sm text-text-ghost text-center py-8">Loading...</p>
+            {circles && circles.length > 0 ? (
+              circles.map(c => <CircleRow key={c.id} circle={c} />)
+            ) : (
+              <p className="text-sm text-text-ghost text-center py-8">No active circles.</p>
             )}
           </div>
           <Button

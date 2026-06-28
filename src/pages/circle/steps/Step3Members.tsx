@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { apiAddMember } from '../../../lib/api'
 import Input from '../../../components/ui/Input'
 import Button from '../../../components/ui/Button'
 import Avatar from '../../../components/ui/Avatar'
@@ -15,6 +13,7 @@ interface Step3Props {
 }
 
 export default function Step3Members({ circleData, members, onAddMember }: Step3Props) {
+  // staging only; API calls occur after circle creation
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -22,15 +21,8 @@ export default function Step3Members({ circleData, members, onAddMember }: Step3
 
   const maxMembers = Number(circleData.maxMembers) || 12
 
-  const mutation = useMutation({
-    mutationFn: () => apiAddMember('new', { name, phone, email: email || undefined }),
-    onSuccess: (member) => {
-      onAddMember(member)
-      setName('')
-      setPhone('')
-      setEmail('')
-    },
-  })
+  // Local add: members are staged locally during circle creation. They are persisted
+  // to the backend after the circle is created.
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -49,7 +41,30 @@ export default function Step3Members({ circleData, members, onAddMember }: Step3
   const handleAdd = () => {
     if (!validate()) return
     if (members.length >= maxMembers) return
-    mutation.mutate()
+    // create a local member object
+    const id = `local-${Date.now()}`
+    const initials = name
+      .split(' ')
+      .map(n => n[0] ?? '')
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+    const member: Member = {
+      id,
+      name: name.trim(),
+      initials,
+      phone: phone.trim(),
+      email: email || undefined,
+      virtualAccount: 'Provisioning',
+      payoutPosition: members.length + 1,
+      status: 'pending',
+      joinedAt: new Date().toISOString(),
+    }
+
+    onAddMember(member)
+    setName('')
+    setPhone('')
+    setEmail('')
   }
 
   return (
@@ -87,7 +102,7 @@ export default function Step3Members({ circleData, members, onAddMember }: Step3
             variant="secondary"
             icon={<PlusIcon className="w-4 h-4" />}
             onClick={handleAdd}
-            loading={mutation.isPending}
+            loading={false}
             disabled={members.length >= maxMembers}
             className="mt-1"
           >

@@ -9,13 +9,43 @@ export interface Member {
   id: string
   name: string
   initials: string
-  phone: string
+  phone?: string
   email?: string
-  virtualAccount: string
-  payoutPosition: number
-  status: MemberStatus
+  virtualAccount?: string
+  payoutPosition?: number
+  status?: MemberStatus
   amountPaid?: number
-  joinedAt: string
+  joinedAt?: string
+  circleId?: string
+  circleName?: string
+}
+
+export interface AdminMember extends Member {}
+
+export interface ContributionRecord {
+  id: string
+  amount?: number
+  status?: string
+  cycle?: number
+  dueDate?: string
+  paidAt?: string
+  createdAt?: string
+}
+
+export interface NotificationItem {
+  id: string
+  title?: string
+  body?: string
+  isRead?: boolean
+  createdAt?: string
+}
+
+export interface PayoutRecord {
+  id: string
+  amount?: number
+  status?: string
+  createdAt?: string
+  recipient?: string
 }
 
 export interface Circle {
@@ -43,6 +73,17 @@ export interface AuthUser {
   role: UserRole
   circleId?: string
   memberId?: string
+}
+
+export interface AuthTokens {
+  accessToken: string
+  refreshToken: string
+}
+
+export interface AuthResponse {
+  user: AuthUser
+  accessToken: string
+  refreshToken: string
 }
 
 export interface CreateCircleFormData {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { apiLogin } from '../lib/api'
@@ -16,11 +16,13 @@ export default function Login() {
 
   const mutation = useMutation({
     mutationFn: () => apiLogin(email, password),
-    onSuccess: (user) => {
-      login(user)
-      navigate(user.role === 'member' ? '/member' : '/overview', { replace: true })
+    onSuccess: auth => {
+      login(auth)
+      navigate(auth.user.role === 'member' ? '/member' : '/overview', { replace: true })
     },
-    onError: () => setError('Invalid credentials. Please try again.'),
+    onError: (error: unknown) => {
+      setError(error instanceof Error ? error.message : 'Invalid credentials. Please try again.')
+    },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -91,7 +93,13 @@ export default function Login() {
           </form>
 
           {/* Demo hint */}
-          <p className="text-xs text-text-ghost text-center mt-5">
+          <p className="text-xs text-text-ghost text-center mt-4">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-blue-accent hover:underline">
+              Register here.
+            </Link>
+          </p>
+          <p className="text-xs text-text-ghost text-center mt-3">
             Demo: use any email to sign in as admin,{' '}
             <span
               className="text-blue-accent cursor-pointer hover:underline"

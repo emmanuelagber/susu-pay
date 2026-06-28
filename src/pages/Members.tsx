@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { apiGetCircles } from '../lib/api'
+import { apiGetAdminMembers } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
 import Badge from '../components/ui/Badge'
 import Avatar from '../components/ui/Avatar'
-import type { Member, Circle } from '../types'
+import type { Member } from '../types'
 
 function fmt(n: number) {
   return '₦' + n.toLocaleString('en-NG')
 }
 
-function MemberRow({ member, index, circle }: { member: Member; index: number; circle: Circle }) {
+function MemberRow({ member, index, circleName }: { member: Member; index: number; circleName?: string }) {
+  const status = member.status ?? 'pending'
   return (
     <tr className="border-b border-border last:border-0 hover:bg-surface-alt/50 transition-colors">
       <td className="py-3.5 pl-5 pr-4">
@@ -17,64 +19,63 @@ function MemberRow({ member, index, circle }: { member: Member; index: number; c
           <Avatar initials={member.initials} size="sm" index={index} />
           <div>
             <p className="text-sm font-medium text-text-base">{member.name}</p>
-            <p className="text-xs text-text-ghost">{member.phone}</p>
+            <p className="text-xs text-text-ghost">{member.phone ?? '—'}</p>
           </div>
         </div>
       </td>
       <td className="py-3.5 px-4">
         <code className="text-xs text-green-accent font-mono tracking-wider bg-green-accent/10 px-2 py-1 rounded">
-          {member.virtualAccount}
+          {member.virtualAccount ?? '—'}
         </code>
       </td>
       <td className="py-3.5 px-4 text-sm text-text-dim text-center tabular">
-        #{member.payoutPosition}
+        #{member.payoutPosition ?? '—'}
       </td>
       <td className="py-3.5 px-4">
         <Badge
           variant={
-            member.status === 'paid' ? 'green' :
-            member.status === 'overdue' ? 'danger' : 'amber'
+            status === 'paid' ? 'green' :
+            status === 'overdue' ? 'danger' : 'amber'
           }
           dot
         >
-          {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+          {status.charAt(0).toUpperCase() + status.slice(1)}
         </Badge>
       </td>
       <td className="py-3.5 px-4 text-sm tabular text-right text-text-base">
         {member.amountPaid ? fmt(member.amountPaid) : <span className="text-text-ghost">—</span>}
       </td>
       <td className="py-3.5 pr-5 pl-4 text-xs text-text-ghost">
-        <Badge variant="muted">{circle.name}</Badge>
+        <Badge variant="muted">{circleName ?? 'Unassigned'}</Badge>
       </td>
     </tr>
   )
 }
 
 export default function Members() {
+  const { user, accessToken } = useAuth()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all')
 
-  const { data: circles, isLoading } = useQuery({
-    queryKey: ['circles'],
-    queryFn: apiGetCircles,
+  const { data: members = [], isLoading } = useQuery({
+    queryKey: ['adminMembers', user?.id, search, filter],
+    queryFn: () => user && accessToken
+      ? apiGetAdminMembers(user.id, accessToken, search.trim() || undefined, undefined, filter === 'all' ? undefined : filter, 1, 50)
+      : Promise.resolve([]),
+    enabled: !!accessToken && !!user?.id,
   })
 
-  const allMembers: Array<{ member: Member; circle: Circle }> = []
-  circles?.forEach(c => {
-    c.members.forEach(m => allMembers.push({ member: m, circle: c }))
-  })
-
-  const filtered = allMembers.filter(({ member }) => {
+  const filtered = members && members.filter(member => {
     const matchesSearch =
       member.name.toLowerCase().includes(search.toLowerCase()) ||
-      member.phone.includes(search) ||
-      member.virtualAccount.includes(search)
+      (member.phone ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (member.virtualAccount ?? '').toLowerCase().includes(search.toLowerCase())
     const matchesFilter = filter === 'all' || member.status === filter
     return matchesSearch && matchesFilter
   })
 
-  const paidCount = allMembers.filter(({ member }) => member.status === 'paid').length
-  const pendingCount = allMembers.filter(({ member }) => member.status === 'pending').length
+  const paidCount = members.filter(member => member.status === 'paid').length
+  const pendingCount = members.filter(member => member.status === 'pending').length
 
   return (
     <div className="p-6 max-w-[1100px] mx-auto">
@@ -83,7 +84,7 @@ export default function Members() {
         <div>
           <h1 className="text-xl font-semibold text-text-base">Members</h1>
           <p className="text-sm text-text-ghost mt-0.5">
-            {allMembers.length} total · {paidCount} paid · {pendingCount} pending
+            {members.length} total · {paidCount} paid · {pendingCount} pending
           </p>
         </div>
       </div>
@@ -155,8 +156,8 @@ export default function Members() {
                   </td>
                 </tr>
               ) : (
-                filtered.map(({ member, circle }, i) => (
-                  <MemberRow key={`${circle.id}-${member.id}`} member={member} circle={circle} index={i} />
+                filtered.map((member, i) => (
+                  <MemberRow key={member.id} member={member} circleName={member.circleName} index={i} />
                 ))
               )}
             </tbody>

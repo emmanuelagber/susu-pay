@@ -3,7 +3,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
-import { apiGetChartData, apiGetCircles } from '../lib/api'
+import { apiGetReports, apiGetCircles, apiExportReports } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
 import { StatCard } from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -83,8 +84,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function Reports() {
-  const { data: chartData } = useQuery({ queryKey: ['chart'], queryFn: apiGetChartData })
-  const { data: circles } = useQuery({ queryKey: ['circles'], queryFn: apiGetCircles })
+  const { user, accessToken } = useAuth()
+
+  const { data: chartData } = useQuery({
+    queryKey: ['chart', user?.id],
+    queryFn: () => user && accessToken ? apiGetReports(user.id, accessToken) : Promise.resolve([]),
+    enabled: !!user && !!accessToken,
+  })
+  const { data: circles } = useQuery({
+    queryKey: ['circles', user?.id],
+    queryFn: () => user && accessToken ? apiGetCircles(user.id, accessToken!, 1, 20) : Promise.resolve([]),
+    enabled: !!accessToken && !!user?.id,
+  })
 
   const totalCollected = circles?.reduce(
     (s, c) => s + c.members.filter(m => m.status === 'paid').reduce((a, m) => a + (m.amountPaid ?? 0), 0),
@@ -101,7 +112,15 @@ export default function Reports() {
           <h1 className="text-xl font-semibold text-text-base">Reports</h1>
           <p className="text-sm text-text-ghost mt-0.5">Collection analytics across all circles.</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => alert('CSV export — replace with real implementation')}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            if (user?.id && accessToken) {
+              apiExportReports(user.id, accessToken).catch(console.error)
+            }
+          }}
+        >
           Export CSV
         </Button>
       </div>

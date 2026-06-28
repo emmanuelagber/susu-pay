@@ -73,7 +73,7 @@ export default function Step4Review({ data, members }: Step4Props) {
         </div>
         <ul className="space-y-2">
           {[
-            `${members.length} member${members.length !== 1 ? 's' : ''} receive their unique virtual account numbers via SMS`,
+            `${members.length} member${members.length !== 1 ? 's' : ''} receive their unique virtual account numbers via Email`,
             'Contributions made to those accounts auto-reconcile to the circle',
             `Payouts release automatically in ${data.payoutOrder.toLowerCase()} order`,
             'You can track progress in real-time on your dashboard',

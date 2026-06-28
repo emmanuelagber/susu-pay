@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
-import { apiGetCircle } from '../../lib/api'
+import { apiGetCircle, apiGetMember, apiGetMemberContributions, apiGetMemberNotifications, apiMarkMemberNotificationsRead } from '../../lib/api'
 import Badge from '../../components/ui/Badge'
 import Avatar from '../../components/ui/Avatar'
 import Button from '../../components/ui/Button'
@@ -153,15 +153,34 @@ function MemberStatusRow({
 }
 
 export default function MemberDashboard() {
-  const { user, logout, switchRole } = useAuth()
+  const { user, accessToken, logout, switchRole } = useAuth()
   const navigate = useNavigate()
 
   const circleId = user?.circleId ?? 'c1'
   const memberId = user?.memberId ?? 'm1'
 
   const { data: circle } = useQuery({
-    queryKey: ['circle', circleId],
-    queryFn: () => apiGetCircle(circleId),
+    queryKey: ['circle', circleId, accessToken],
+    queryFn: () => accessToken ? apiGetCircle(circleId, accessToken) : Promise.resolve(null),
+    enabled: !!accessToken,
+  })
+  const { data: memberProfile } = useQuery({
+    queryKey: ['member-profile', memberId, accessToken],
+    queryFn: () => accessToken && memberId ? apiGetMember(memberId, accessToken) : Promise.resolve(null),
+    enabled: !!accessToken && !!memberId,
+  })
+  const { data: contributions } = useQuery({
+    queryKey: ['member-contributions', memberId, accessToken],
+    queryFn: () => accessToken && memberId ? apiGetMemberContributions(memberId, accessToken) : Promise.resolve([]),
+    enabled: !!accessToken && !!memberId,
+  })
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['member-notifications', memberId, accessToken],
+    queryFn: () => accessToken && memberId ? apiGetMemberNotifications(memberId, accessToken, 1, 5) : Promise.resolve([]),
+    enabled: !!accessToken && !!memberId,
+  })
+  const markReadMutation = useMutation({
+    mutationFn: () => accessToken && memberId ? apiMarkMemberNotificationsRead(memberId, accessToken) : Promise.resolve(false),
   })
 
   const handleLogout = () => {
@@ -233,7 +252,7 @@ export default function MemberDashboard() {
         {/* Virtual account card */}
         {me && (
           <div className="mb-5">
-            <VirtualAccountCard account={me.virtualAccount} name={me.name} />
+            <VirtualAccountCard account={me.virtualAccount ?? '—'} name={me.name} />
           </div>
         )}
 
@@ -256,6 +275,34 @@ export default function MemberDashboard() {
             secondary={`Spots remaining: ${remaining}`}
           />
         </div>
+
+        {(memberProfile || contributions?.length || notifications.length) && (
+          <div className="bg-surface rounded-xl border border-border p-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-text-base">Activity snapshot</h2>
+              <button
+                onClick={() => markReadMutation.mutate()}
+                className="text-[11px] text-blue-accent hover:opacity-80"
+              >
+                {markReadMutation.isPending ? 'Saving…' : 'Mark read'}
+              </button>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-[11px] text-text-ghost uppercase tracking-wider">Member profile</p>
+                <p className="text-sm font-semibold text-text-base mt-1">{memberProfile?.name ?? user?.name ?? '—'}</p>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-[11px] text-text-ghost uppercase tracking-wider">Contributions</p>
+                <p className="text-sm font-semibold text-text-base mt-1">{contributions?.length ?? 0} entries</p>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-[11px] text-text-ghost uppercase tracking-wider">Notifications</p>
+                <p className="text-sm font-semibold text-text-base mt-1">{notifications.filter(n => !n.isRead).length} unread</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Cycle status */}
         {circle && (

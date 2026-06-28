@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import AppLayout from './components/layout/AppLayout'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Overview from './pages/Overview'
 import Members from './pages/Members'
 import Reports from './pages/Reports'
@@ -19,6 +20,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route
+          path="/register"
+          element={user ? <Navigate to={user.role === 'member' ? '/member' : '/overview'} replace /> : <Register />}
+        />
         <Route
           path="/login"
           element={user ? <Navigate to={user.role === 'member' ? '/member' : '/overview'} replace /> : <Login />}

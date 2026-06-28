@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { apiCreateCircle } from '../../lib/api'
+import { apiCreateCircle, apiAddMember } from '../../lib/api'
+import { useAuth } from '../../context/AuthContext'
 import Stepper from '../../components/ui/Stepper'
 import Button from '../../components/ui/Button'
 import { ArrowLeftIcon, ArrowRightIcon } from '../../components/ui/Icons'
@@ -25,14 +26,26 @@ const DEFAULT_FORM: CreateCircleFormData = {
 }
 
 export default function CreateCircle() {
+  const { user, accessToken } = useAuth()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<CreateCircleFormData>(DEFAULT_FORM)
   const [members, setMembers] = useState<Member[]>([])
   const navigate = useNavigate()
 
   const createMutation = useMutation({
-    mutationFn: () => apiCreateCircle(form),
-    onSuccess: () => navigate('/overview'),
+    mutationFn: () => user && accessToken ? apiCreateCircle(form, user.id, accessToken) : Promise.reject('No auth token'),
+    onSuccess: async (c) => {
+      // persist staged members to backend
+      if (members.length > 0 && accessToken) {
+        try {
+          await Promise.all(members.map(m => apiAddMember(c.id, { name: m.name, phone: m.phone ?? '', email: m.email }, accessToken)))
+        } catch (err) {
+          // swallow for now; optionally surface toast
+          console.error('Failed to add members after circle creation', err)
+        }
+      }
+      navigate(`/circle/${c.id}/members`)
+    },
   })
 
   const updateForm = (patch: Partial<CreateCircleFormData>) => {

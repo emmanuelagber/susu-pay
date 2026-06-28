@@ -48,7 +48,7 @@ export default function Step2Details({ data, onChange }: Step2Props) {
         <Input
           label="Max members"
           type="number"
-          placeholder={data.plan === 'BAM' ? '100' : '50'}
+          placeholder={data.plan === 'BAM' ? '12' : '100'}
           value={data.maxMembers}
           onChange={e => onChange({ maxMembers: e.target.value === '' ? '' : Number(e.target.value) })}
         />
