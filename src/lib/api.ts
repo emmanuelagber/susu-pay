@@ -146,6 +146,12 @@ export async function apiGetOverview(adminId: string, token: string): Promise<Da
     totalContributions: data.totalCollected ?? 0,
     pendingPayouts: 0,
     collectionRate: data.collectionRatePercent ?? 0,
+    chartData: (data.contributionTrends ?? []).map((t: { month: string; expected: number; actual: number }) => ({
+      month: t.month,
+      expected: t.expected,
+      actual: t.actual,
+    })),
+    activeCirclesList: data.activeCircles ?? [],
   }
 }
 

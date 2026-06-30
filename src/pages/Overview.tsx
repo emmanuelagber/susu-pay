@@ -4,14 +4,14 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { apiGetOverview, apiGetReports, apiGetCircles } from '../lib/api'
+import { apiGetOverview } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { StatCard } from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import { PlusIcon, ArrowRightIcon } from '../components/ui/Icons'
 import { chartColors } from '../tokens'
-import type { Circle } from '../types'
+import type { OverviewCircle } from '../types'
 
 function fmt(n?: number | null) {
   if (n === null || n === undefined) return '—'
@@ -32,10 +32,8 @@ function CollectionBar({ rate }: { rate: number }) {
   )
 }
 
-function CircleRow({ circle }: { circle: Circle }) {
-  const paidCount = circle.members.filter(m => m.status === 'paid').length
-  const rate = circle.members.length > 0 ? Math.round((paidCount / circle.members.length) * 100) : 0
-
+function CircleRow({ circle }: { circle: OverviewCircle }) {
+  const isActive = circle.status.toLowerCase() === 'active'
   return (
     <div className="flex items-center gap-4 py-3.5 border-b border-border last:border-0">
       <div className="flex-1 min-w-0">
@@ -45,15 +43,13 @@ function CircleRow({ circle }: { circle: Circle }) {
             {circle.plan}
           </Badge>
         </div>
-        <p className="text-xs text-text-ghost">
-          Cycle {circle.cycle}/{circle.totalCycles} · {circle.members.length}/{circle.maxMembers} members · {fmt(circle.contribution)}/{circle.frequency.toLowerCase()}
-        </p>
+        <p className="text-xs text-text-ghost truncate">{circle.cycleInfo}</p>
       </div>
       <div className="w-28 flex-shrink-0">
-        <CollectionBar rate={rate} />
+        <CollectionBar rate={circle.collectionRatePercent} />
       </div>
-      <Badge variant={circle.status === 'active' ? 'green' : 'muted'} dot>
-        {circle.status === 'active' ? 'Active' : 'Pending'}
+      <Badge variant={isActive ? 'green' : 'muted'} dot>
+        {circle.status}
       </Badge>
     </div>
   )
@@ -84,24 +80,9 @@ export default function Overview() {
 
   const { data: stats } = useQuery({
     queryKey: ['stats', user?.id],
-    queryFn: () => user && accessToken ? apiGetOverview(user.id, accessToken) : Promise.resolve(null as any),
+    queryFn: () => apiGetOverview(user!.id, accessToken!),
     enabled: !!user && !!accessToken,
   })
-  const { data: reports } = useQuery({
-    queryKey: ['chart', user?.id],
-    queryFn: () => apiGetReports(user!.id, accessToken!),
-    enabled: !!user && !!accessToken,
-  })
-  const { data: circlesRaw } = useQuery({
-    queryKey: ['circles', user?.id],
-    queryFn: () => apiGetCircles(user!.id, accessToken!, 1, 20),
-    enabled: !!user && !!accessToken,
-  })
-  const circles: Circle[] = Array.isArray(circlesRaw)
-    ? circlesRaw
-    : Array.isArray((circlesRaw as unknown as Record<string, unknown>)?.items)
-      ? ((circlesRaw as unknown as Record<string, unknown>).items as Circle[])
-      : []
 
   const greeting = () => {
     const h = new Date().getHours()
@@ -170,7 +151,7 @@ export default function Overview() {
           </div>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={reports?.chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+              <AreaChart data={stats?.chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradActual" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="10%" stopColor={chartColors.green} stopOpacity={0.18} />
@@ -209,8 +190,8 @@ export default function Overview() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {circles && circles.length > 0 ? (
-              circles.map(c => <CircleRow key={c.id} circle={c} />)
+            {stats?.activeCirclesList && stats.activeCirclesList.length > 0 ? (
+              stats.activeCirclesList.map(c => <CircleRow key={c.id} circle={c} />)
             ) : (
               <p className="text-sm text-text-ghost text-center py-8">No active circles.</p>
             )}

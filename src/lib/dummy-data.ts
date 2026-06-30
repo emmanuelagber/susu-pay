@@ -160,6 +160,8 @@ export const DASHBOARD_STATS: DashboardStats = {
   totalContributions: 370000,
   pendingPayouts: 2,
   collectionRate: 71,
+  chartData: [],
+  activeCirclesList: [],
 }
 
 export const CHART_DATA: ChartDataPoint[] = [

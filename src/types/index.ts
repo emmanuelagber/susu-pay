@@ -97,6 +97,19 @@ export interface CreateCircleFormData {
   description: string
 }
 
+export interface OverviewCircle {
+  id: string
+  name: string
+  plan: string
+  cycleInfo: string
+  memberCount: number
+  maxMembers: number
+  contributionAmount: number
+  frequency: string
+  collectionRatePercent: number
+  status: string
+}
+
 export interface DashboardStats {
   totalCircles: number
   activeCircles: number
@@ -104,6 +117,8 @@ export interface DashboardStats {
   totalContributions: number
   pendingPayouts: number
   collectionRate: number
+  chartData: ChartDataPoint[]
+  activeCirclesList: OverviewCircle[]
 }
 
 export interface ChartDataPoint {
