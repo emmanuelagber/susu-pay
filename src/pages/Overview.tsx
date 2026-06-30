@@ -87,16 +87,21 @@ export default function Overview() {
     queryFn: () => user && accessToken ? apiGetOverview(user.id, accessToken) : Promise.resolve(null as any),
     enabled: !!user && !!accessToken,
   })
-  const { data: chartData } = useQuery({
+  const { data: reports } = useQuery({
     queryKey: ['chart', user?.id],
-    queryFn: () => user && accessToken ? apiGetReports(user.id, accessToken) : Promise.resolve([]),
+    queryFn: () => apiGetReports(user!.id, accessToken!),
     enabled: !!user && !!accessToken,
   })
-  const { data: circles } = useQuery({
-     queryKey: ['circles', user?.id],
-     queryFn: () => user && accessToken ? apiGetCircles(user.id, accessToken!, 1, 20) : Promise.resolve([]),
-    enabled: !!accessToken,
+  const { data: circlesRaw } = useQuery({
+    queryKey: ['circles', user?.id],
+    queryFn: () => apiGetCircles(user!.id, accessToken!, 1, 20),
+    enabled: !!user && !!accessToken,
   })
+  const circles: Circle[] = Array.isArray(circlesRaw)
+    ? circlesRaw
+    : Array.isArray((circlesRaw as unknown as Record<string, unknown>)?.items)
+      ? ((circlesRaw as unknown as Record<string, unknown>).items as Circle[])
+      : []
 
   const greeting = () => {
     const h = new Date().getHours()
@@ -165,7 +170,7 @@ export default function Overview() {
           </div>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+              <AreaChart data={reports?.chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradActual" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="10%" stopColor={chartColors.green} stopOpacity={0.18} />

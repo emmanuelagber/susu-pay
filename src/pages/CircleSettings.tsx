@@ -5,7 +5,7 @@ import { getCircleSettings, updateCircleSettings } from '../api/circles'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
-import { ArrowLeftIcon, InfoIcon, LockIcon } from '../components/ui/Icons'
+import { ArrowLeftIcon, CheckIcon, InfoIcon, LockIcon } from '../components/ui/Icons'
 import type { CircleSettingsPatch } from '../types/sprint2'
 
 function LockNote({ text }: { text: string }) {
