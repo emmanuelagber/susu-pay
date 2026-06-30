@@ -3,45 +3,38 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
-import { apiGetReports, apiGetCircles, apiExportReports } from '../lib/api'
+import { apiGetReports, apiExportReports } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { StatCard } from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import { chartColors } from '../tokens'
-import type { Circle } from '../types'
+import type { CircleBreakdown } from '../types'
 
 function fmt(n: number) {
   return '₦' + n.toLocaleString('en-NG')
 }
 
-function CircleSummary({ circle }: { circle: Circle }) {
-  const paid = circle.members.filter(m => m.status === 'paid')
-  const total = circle.members.length
-  const collected = paid.reduce((s, m) => s + (m.amountPaid ?? 0), 0)
-  const expected = total * circle.contribution
-  const rate = total > 0 ? Math.round((paid.length / total) * 100) : 0
-
+function CircleBreakdownCard({ b }: { b: CircleBreakdown }) {
+  const rate = b.ratePercent
   return (
     <div className="bg-surface rounded-xl border border-border p-4">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="text-sm font-medium text-text-base">{circle.name}</p>
-          <p className="text-xs text-text-ghost mt-0.5">
-            Cycle {circle.cycle} of {circle.totalCycles} · {circle.frequency}
-          </p>
+          <p className="text-sm font-medium text-text-base">{b.name}</p>
+          <p className="text-xs text-text-ghost mt-0.5">{b.cycleInfo}</p>
         </div>
-        <Badge variant={circle.plan === 'ADASHI' ? 'blue' : 'muted'}>{circle.plan}</Badge>
+        <Badge variant={b.plan === 'ADASHI' ? 'blue' : 'muted'}>{b.plan}</Badge>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-3">
         <div>
           <p className="text-[11px] text-text-ghost uppercase tracking-wide mb-1">Collected</p>
-          <p className="text-sm font-semibold text-green-accent tabular">{fmt(collected)}</p>
+          <p className="text-sm font-semibold text-green-accent tabular">{fmt(b.collected)}</p>
         </div>
         <div>
           <p className="text-[11px] text-text-ghost uppercase tracking-wide mb-1">Expected</p>
-          <p className="text-sm font-semibold text-text-base tabular">{fmt(expected)}</p>
+          <p className="text-sm font-semibold text-text-base tabular">{fmt(b.expected)}</p>
         </div>
         <div>
           <p className="text-[11px] text-text-ghost uppercase tracking-wide mb-1">Rate</p>
@@ -86,23 +79,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function Reports() {
   const { user, accessToken } = useAuth()
 
-  const { data: chartData } = useQuery({
-    queryKey: ['chart', user?.id],
-    queryFn: () => user && accessToken ? apiGetReports(user.id, accessToken) : Promise.resolve([]),
+  const { data: reports, isLoading } = useQuery({
+    queryKey: ['reports', user?.id],
+    queryFn: () => apiGetReports(user!.id, accessToken!),
     enabled: !!user && !!accessToken,
   })
-  const { data: circles } = useQuery({
-    queryKey: ['circles', user?.id],
-    queryFn: () => user && accessToken ? apiGetCircles(user.id, accessToken!, 1, 20) : Promise.resolve([]),
-    enabled: !!accessToken && !!user?.id,
-  })
 
-  const totalCollected = circles?.reduce(
-    (s, c) => s + c.members.filter(m => m.status === 'paid').reduce((a, m) => a + (m.amountPaid ?? 0), 0),
-    0,
-  ) ?? 0
-  const totalExpected = circles?.reduce((s, c) => s + c.members.length * c.contribution, 0) ?? 0
-  const overallRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0
+  const rate = reports?.overallRatePercent ?? 0
 
   return (
     <div className="p-6 max-w-[1100px] mx-auto">
@@ -125,12 +108,27 @@ export default function Reports() {
         </Button>
       </div>
 
-      {/* Top stats */}
+      {/* Top stats — sourced directly from the reports endpoint */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total collected" value={fmt(totalCollected)} accent="green" />
-        <StatCard label="Total expected" value={fmt(totalExpected)} />
-        <StatCard label="Overall rate" value={`${overallRate}%`} accent={overallRate >= 80 ? 'green' : 'amber'} />
-        <StatCard label="Active circles" value={circles?.length ?? 0} accent="blue" />
+        <StatCard
+          label="Total collected"
+          value={reports ? fmt(reports.totalCollected) : '—'}
+          accent="green"
+        />
+        <StatCard
+          label="Total expected"
+          value={reports ? fmt(reports.totalExpected) : '—'}
+        />
+        <StatCard
+          label="Overall rate"
+          value={reports ? `${rate}%` : '—'}
+          accent={rate >= 80 ? 'green' : rate >= 50 ? 'amber' : undefined}
+        />
+        <StatCard
+          label="Active circles"
+          value={reports?.activeCirclesCount ?? '—'}
+          accent="blue"
+        />
       </div>
 
       {/* Bar chart */}
@@ -138,13 +136,27 @@ export default function Reports() {
         <h2 className="text-sm font-semibold text-text-base mb-4">Monthly collections (2026)</h2>
         <div style={{ height: 200 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={18}>
+            <BarChart
+              data={reports?.chartData}
+              margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
+              barSize={18}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: chartColors.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: chartColors.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₦${(v / 1000).toFixed(0)}k`} />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: chartColors.axis, fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fill: chartColors.axis, fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={v => `₦${(v / 1000).toFixed(0)}k`}
+              />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(75,124,243,0.06)' }} />
               <Bar dataKey="actual" radius={[4, 4, 0, 0]}>
-                {chartData?.map((entry, i) => (
+                {reports?.chartData?.map((entry, i) => (
                   <Cell
                     key={i}
                     fill={entry.actual >= entry.expected ? chartColors.green : chartColors.amber}
@@ -160,9 +172,17 @@ export default function Reports() {
       {/* Per-circle breakdown */}
       <div>
         <h2 className="text-sm font-semibold text-text-base mb-3">Circle breakdown</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {circles?.map(c => <CircleSummary key={c.id} circle={c} />) ?? null}
-        </div>
+        {isLoading ? (
+          <p className="text-sm text-text-ghost">Loading…</p>
+        ) : !reports?.circleBreakdowns?.length ? (
+          <p className="text-sm text-text-ghost">No circle data available.</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {reports.circleBreakdowns.map(b => (
+              <CircleBreakdownCard key={b.circleId} b={b} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

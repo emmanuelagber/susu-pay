@@ -127,3 +127,61 @@ export const SparkleIcon = ({ className }: IconProps) => (
     <path d="M8 1v3M8 12v3M1 8h3M12 8h3M3.05 3.05l2.12 2.12M10.83 10.83l2.12 2.12M3.05 12.95l2.12-2.12M10.83 5.17l2.12-2.12" />
   </svg>
 )
+
+export const BellIcon = ({ className }: IconProps) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M8 2a4.5 4.5 0 0 0-4.5 4.5c0 2.5-1 3.5-1 3.5h11s-1-1-1-3.5A4.5 4.5 0 0 0 8 2z" />
+    <path d="M9.3 12.5a1.3 1.3 0 0 1-2.6 0" />
+  </svg>
+)
+
+export const ReceiptIcon = ({ className }: IconProps) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="2" y="1.5" width="12" height="13" rx="1.5" />
+    <line x1="5" y1="5.5" x2="11" y2="5.5" />
+    <line x1="5" y1="8" x2="11" y2="8" />
+    <line x1="5" y1="10.5" x2="8.5" y2="10.5" />
+  </svg>
+)
+
+export const WalletIcon = ({ className }: IconProps) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="1.5" y="4" width="13" height="9.5" rx="1.5" />
+    <path d="M4 4V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1" />
+    <circle cx="11.5" cy="8.5" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+export const LinkIcon = ({ className }: IconProps) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M6.5 9.5a3.5 3.5 0 0 0 5 0l1.5-1.5a3.5 3.5 0 0 0-5-5L7 4" />
+    <path d="M9.5 6.5a3.5 3.5 0 0 0-5 0L3 8a3.5 3.5 0 0 0 5 5L9 12" />
+  </svg>
+)
+
+export const LockIcon = ({ className }: IconProps) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="3" y="7.5" width="10" height="7" rx="1.5" />
+    <path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5" />
+  </svg>
+)
+
+export const SortAscIcon = ({ className }: IconProps) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="12" x2="4" y2="4" />
+    <polyline points="2,6 4,4 6,6" />
+    <line x1="9" y1="5" x2="14" y2="5" />
+    <line x1="9" y1="8" x2="13" y2="8" />
+    <line x1="9" y1="11" x2="12" y2="11" />
+  </svg>
+)
+
+export const SortDescIcon = ({ className }: IconProps) => (
+  <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="4" x2="4" y2="12" />
+    <polyline points="2,10 4,12 6,10" />
+    <line x1="9" y1="5" x2="14" y2="5" />
+    <line x1="9" y1="8" x2="13" y2="8" />
+    <line x1="9" y1="11" x2="12" y2="11" />
+  </svg>
+)

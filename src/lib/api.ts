@@ -10,7 +10,7 @@ import type {
   AuthUser,
   AuthTokens,
   DashboardStats,
-  ChartDataPoint,
+  ReportsData,
   CreateCircleFormData,
 } from '../types'
 
@@ -149,7 +149,7 @@ export async function apiGetOverview(adminId: string, token: string): Promise<Da
   }
 }
 
-export async function apiGetReports(adminId: string, token: string): Promise<ChartDataPoint[]> {
+export async function apiGetReports(adminId: string, token: string): Promise<ReportsData> {
   const response = await apiRequest<{
     success: boolean
     data: {
@@ -158,16 +158,39 @@ export async function apiGetReports(adminId: string, token: string): Promise<Cha
       overallRatePercent: number
       activeCirclesCount: number
       monthlyCollections: Array<{ month: string; monthNumber: number; collected: number; expected: number }>
-      circleBreakdowns: any[]
+      circleBreakdowns: Array<{
+        circleId: string
+        name: string
+        plan: string
+        cycleInfo: string
+        collected: number
+        expected: number
+        ratePercent: number
+      }>
     }
   }>(`/admin/${adminId}/reports`, {}, token)
 
-  // Map backend monthlyCollections to ChartDataPoint[] expected by the UI
-  return response.data.monthlyCollections.map(mc => ({
-    month: mc.month,
-    expected: mc.expected,
-    actual: mc.collected,
-  }))
+  const d = response.data
+  return {
+    totalCollected: d.totalCollected,
+    totalExpected: d.totalExpected,
+    overallRatePercent: d.overallRatePercent,
+    activeCirclesCount: d.activeCirclesCount,
+    chartData: d.monthlyCollections.map(mc => ({
+      month: mc.month,
+      expected: mc.expected,
+      actual: mc.collected,
+    })),
+    circleBreakdowns: d.circleBreakdowns.map(b => ({
+      circleId: b.circleId,
+      name: b.name,
+      plan: b.plan,
+      cycleInfo: b.cycleInfo,
+      collected: b.collected,
+      expected: b.expected,
+      ratePercent: b.ratePercent,
+    })),
+  }
 }
 
 export async function apiExportReports(adminId: string, token: string, circleId?: string): Promise<void> {

@@ -8,6 +8,11 @@ import Members from './pages/Members'
 import Reports from './pages/Reports'
 import CreateCircle from './pages/circle/CreateCircle'
 import MemberDashboard from './pages/member/MemberDashboard'
+import ReconciliationBoard from './pages/ReconciliationBoard'
+import ManualReconciliation from './pages/ManualReconciliation'
+import PayoutFlow from './pages/PayoutFlow'
+import CircleSettings from './pages/CircleSettings'
+import NotificationsCenter from './pages/NotificationsCenter'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
@@ -43,7 +48,12 @@ export default function App() {
           <Route path="members" element={<Members />} />
           <Route path="reports" element={<Reports />} />
           <Route path="circles/new" element={<CreateCircle />} />
-          <Route path="settings" element={<div className="p-8 text-text-dim">Settings — coming soon</div>} />
+          <Route path="circles/:circleId/settings" element={<CircleSettings />} />
+          <Route path="reconciliation" element={<ReconciliationBoard />} />
+          <Route path="reconciliation/match" element={<ManualReconciliation />} />
+          <Route path="payouts" element={<PayoutFlow />} />
+          <Route path="notifications" element={<NotificationsCenter />} />
+          <Route path="settings" element={<Navigate to="/overview" replace />} />
         </Route>
 
         {/* Member route */}

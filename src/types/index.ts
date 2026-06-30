@@ -111,3 +111,22 @@ export interface ChartDataPoint {
   expected: number
   actual: number
 }
+
+export interface CircleBreakdown {
+  circleId: string
+  name: string
+  plan: string
+  cycleInfo: string
+  collected: number
+  expected: number
+  ratePercent: number
+}
+
+export interface ReportsData {
+  totalCollected: number
+  totalExpected: number
+  overallRatePercent: number
+  activeCirclesCount: number
+  chartData: ChartDataPoint[]
+  circleBreakdowns: CircleBreakdown[]
+}

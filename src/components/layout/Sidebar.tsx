@@ -1,18 +1,33 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
-import { CircleLogo, GridIcon, UsersIcon, ChartBarIcon, GearIcon, LogOutIcon } from '../ui/Icons'
+import {
+  CircleLogo, GridIcon, UsersIcon, ChartBarIcon, ReceiptIcon,
+  WalletIcon, BellIcon, LogOutIcon,
+} from '../ui/Icons'
 import Avatar from '../ui/Avatar'
+import { getNotifications } from '../../api/notifications'
 
 const NAV_ITEMS = [
-  { label: 'Overview', path: '/overview', Icon: GridIcon },
-  { label: 'Members',  path: '/members',  Icon: UsersIcon },
-  { label: 'Reports',  path: '/reports',  Icon: ChartBarIcon },
-  { label: 'Settings', path: '/settings', Icon: GearIcon },
+  { label: 'Overview',        path: '/overview',        Icon: GridIcon },
+  { label: 'Members',         path: '/members',         Icon: UsersIcon },
+  { label: 'Reconciliation',  path: '/reconciliation',  Icon: ReceiptIcon },
+  { label: 'Payouts',         path: '/payouts',         Icon: WalletIcon },
+  { label: 'Reports',         path: '/reports',         Icon: ChartBarIcon },
 ]
 
 export default function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user, accessToken, logout } = useAuth()
   const navigate = useNavigate()
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', user?.id, user?.role],
+    queryFn: () => getNotifications(user!.id, user!.role, accessToken!),
+    enabled: !!user && !!accessToken,
+    refetchInterval: 60000,
+  })
+
+  const unreadCount = notifications.filter(n => !n.isRead).length
 
   const handleLogout = () => {
     logout()
@@ -56,6 +71,33 @@ export default function Sidebar() {
             )}
           </NavLink>
         ))}
+
+        {/* Notifications with unread badge */}
+        <NavLink
+          to="/notifications"
+          className={({ isActive }) =>
+            [
+              'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors',
+              isActive
+                ? 'bg-[#1A3050] text-text-base'
+                : 'text-text-dim hover:text-text-base hover:bg-[#162840]',
+            ].join(' ')
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <div className="relative flex-shrink-0">
+                <BellIcon className={['w-4 h-4', isActive ? 'text-text-base' : 'text-text-ghost'].join(' ')} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full bg-blue-accent text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
+              Notifications
+            </>
+          )}
+        </NavLink>
       </nav>
 
       {/* User + logout */}
