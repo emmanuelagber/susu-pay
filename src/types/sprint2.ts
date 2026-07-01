@@ -2,13 +2,17 @@ export type ReconciliationStatus = 'paid' | 'partial' | 'overdue' | 'unpaid'
 export type PayoutStatus = 'pending' | 'current' | 'completed' | 'failed'
 export type NotificationType =
   | 'payment_confirmed'
-  | 'payout_released'
+  | 'payment_received'
+  | 'payment_overdue'
+  | 'partial_payment'
   | 'member_joined'
+  | 'payout_triggered'
+  | 'payout_failed'
+  | 'payout_completed'
+  | 'payout_released'
+  | 'match_resolved'
   | 'circle_paused'
   | 'circle_resumed'
-  | 'payment_overdue'
-  | 'match_resolved'
-  | 'partial_payment'
   | 'circle_completed'
 export type NotificationCategory = 'payment' | 'payout' | 'system'
 
@@ -27,10 +31,11 @@ export interface ReconciliationRow {
 
 export interface UnmatchedTransaction {
   id: string
-  fromVirtualAccount: string
+  virtualAccountNumber: string
+  senderAccountNumber: string
   amount: number
   receivedAt: string
-  reference: string
+  transactionReference: string
   senderName?: string
   possibleMemberId?: string
 }
@@ -112,6 +117,7 @@ export interface NotificationFeedItem {
   body: string
   isRead: boolean
   createdAt: string
+  circleName?: string
   meta?: {
     circleId?: string
     circleName?: string
@@ -120,4 +126,12 @@ export interface NotificationFeedItem {
     amount?: number
     cycle?: number
   }
+}
+
+export interface NotificationListResponse {
+  unreadCount: number
+  total: number
+  page: number
+  pageSize: number
+  items: NotificationFeedItem[]
 }

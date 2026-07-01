@@ -53,16 +53,16 @@ function SortBtn({ col, current, dir, onClick }: {
 }
 
 export default function ReconciliationBoard() {
-  const { accessToken } = useAuth()
+  const { user, accessToken } = useAuth()
   const { circleId, selectedCircle, setCircleId, circles } = useSelectedCircle()
   const [filter, setFilter] = useState<Filter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('position')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const { data: rows = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['reconciliation', circleId],
-    queryFn: () => getReconciliationBoard(circleId, accessToken!),
-    enabled: !!circleId && !!accessToken,
+    queryKey: ['reconciliation', user?.id, circleId],
+    queryFn: () => getReconciliationBoard(user!.id, circleId, accessToken!),
+    enabled: !!circleId && !!accessToken && !!user?.id,
   })
 
   const handleSort = (key: SortKey) => {

@@ -44,11 +44,11 @@ function TxnCard({
         {selected && <CheckIcon className="w-3.5 h-3.5 text-blue-accent flex-shrink-0 mt-0.5" />}
       </div>
       {txn.senderName && (
-        <p className="text-xs text-text-dim mb-1">Sender: {txn.senderName}</p>
+        <p className="text-xs text-[#ffffff] mb-1">Sender: {txn.senderName}</p>
       )}
-      <p className="text-xs text-text-ghost font-mono">{txn.fromVirtualAccount}</p>
-      <p className="text-xs text-text-ghost mt-1">{fmtTime(txn.receivedAt)}</p>
-      <p className="text-xs text-text-ghost opacity-60">{txn.reference}</p>
+      <p className="text-xs text-[#ffffff] font-mono">{txn.virtualAccountNumber}</p>
+      <p className="text-xs text-[#ffffff] mt-1">{fmtTime(txn.receivedAt)}</p>
+      <p className="text-xs text-[#ffffff] opacity-60">{txn.transactionReference}</p>
     </button>
   )
 }
@@ -91,7 +91,7 @@ function MemberRow({
 }
 
 export default function ManualReconciliation() {
-  const { accessToken } = useAuth()
+  const { user, accessToken } = useAuth()
   const qc = useQueryClient()
   const { circleId, circles, setCircleId, selectedCircle } = useSelectedCircle()
 
@@ -102,30 +102,30 @@ export default function ManualReconciliation() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
   const { data: transactions = [], isLoading: txnLoading, error: txnError, refetch: refetchTxn } = useQuery({
-    queryKey: ['unmatched', circleId],
-    queryFn: () => getUnmatchedTransactions(circleId, accessToken!),
-    enabled: !!circleId && !!accessToken,
+    queryKey: ['unmatched', user?.id, circleId],
+    queryFn: () => getUnmatchedTransactions(user!.id, circleId, accessToken!),
+    enabled: !!circleId && !!accessToken && !!user?.id,
   })
 
   const { data: members = [], isLoading: memberLoading, error: memberError, refetch: refetchMembers } = useQuery({
-    queryKey: ['reconciliation', circleId],
-    queryFn: () => getReconciliationBoard(circleId, accessToken!),
-    enabled: !!circleId && !!accessToken,
+    queryKey: ['reconciliation', user?.id, circleId],
+    queryFn: () => getReconciliationBoard(user!.id, circleId, accessToken!),
+    enabled: !!circleId && !!accessToken && !!user?.id,
   })
 
   const matchMutation = useMutation({
     mutationFn: ({ txnId, mId }: { txnId: string; mId: string }) =>
-      matchTransaction(txnId, mId, circleId, accessToken!),
+      matchTransaction(user!.id, txnId, mId, accessToken!),
     onMutate: async ({ txnId }) => {
-      await qc.cancelQueries({ queryKey: ['unmatched', circleId] })
-      const prev = qc.getQueryData<UnmatchedTransaction[]>(['unmatched', circleId])
-      qc.setQueryData<UnmatchedTransaction[]>(['unmatched', circleId], old =>
+      await qc.cancelQueries({ queryKey: ['unmatched', user?.id, circleId] })
+      const prev = qc.getQueryData<UnmatchedTransaction[]>(['unmatched', user?.id, circleId])
+      qc.setQueryData<UnmatchedTransaction[]>(['unmatched', user?.id, circleId], old =>
         old?.filter(t => t.id !== txnId) ?? [],
       )
       return { prev }
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['unmatched', circleId], ctx.prev)
+      if (ctx?.prev) qc.setQueryData(['unmatched', user?.id, circleId], ctx.prev)
       setToast({ type: 'error', msg: _err instanceof Error ? _err.message : 'Match failed.' })
       setTimeout(() => setToast(null), 4000)
     },
@@ -134,17 +134,17 @@ export default function ManualReconciliation() {
       setSelectedMemberId(null)
       setToast({ type: 'success', msg: 'Transaction matched successfully.' })
       setTimeout(() => setToast(null), 3000)
-      qc.invalidateQueries({ queryKey: ['reconciliation', circleId] })
+      qc.invalidateQueries({ queryKey: ['reconciliation', user?.id, circleId] })
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['unmatched', circleId] })
+      qc.invalidateQueries({ queryKey: ['unmatched', user?.id, circleId] })
     },
   })
 
   const filteredTxns = transactions.filter(t =>
     !txnSearch ||
-    t.fromVirtualAccount.includes(txnSearch) ||
-    t.reference.toLowerCase().includes(txnSearch.toLowerCase()) ||
+    t.virtualAccountNumber.includes(txnSearch) ||
+    t.transactionReference.toLowerCase().includes(txnSearch.toLowerCase()) ||
     (t.senderName ?? '').toLowerCase().includes(txnSearch.toLowerCase()),
   )
 
@@ -185,7 +185,7 @@ export default function ManualReconciliation() {
             {selectedTxn ? (
               <span className="text-text-base">
                 <span className="font-semibold">{fmt(selectedTxn.amount)}</span>
-                <span className="text-text-ghost ml-1.5">· {selectedTxn.reference}</span>
+                <span className="text-text-ghost ml-1.5">· {selectedTxn.transactionReference}</span>
               </span>
             ) : (
               <span className="text-text-ghost">Select a transaction</span>

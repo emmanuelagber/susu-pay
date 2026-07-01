@@ -9,7 +9,7 @@ interface AuthContextValue {
   refreshToken: string | null
   login: (auth: AuthResponse) => void
   logout: () => void
-  switchRole: () => void
+  switchRole: (nextRole?: 'admin' | 'member') => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -48,18 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  const switchRole = () => {
+  const switchRole = (nextRole?: 'admin' | 'member') => {
     if (!user) return
 
-    if (user.role === 'admin') {
-      setUser(MEMBER_USER)
-    } else {
-      setUser(ADMIN_USER)
-    }
+    const resolvedRole = nextRole ?? (user.role === 'admin' ? 'member' : 'admin')
+    const nextUser = resolvedRole === 'admin' ? ADMIN_USER : MEMBER_USER
 
-    setAccessToken(null)
-    setRefreshToken(null)
-    localStorage.removeItem(STORAGE_KEY)
+    setUser(nextUser)
+    setAccessToken(accessToken)
+    setRefreshToken(refreshToken)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: nextUser, accessToken, refreshToken }))
   }
 
   return (

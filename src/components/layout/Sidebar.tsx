@@ -20,14 +20,14 @@ export default function Sidebar() {
   const { user, accessToken, logout } = useAuth()
   const navigate = useNavigate()
 
-  const { data: notifications = [] } = useQuery({
+  const { data } = useQuery({
     queryKey: ['notifications', user?.id, user?.role],
     queryFn: () => getNotifications(user!.id, user!.role, accessToken!),
     enabled: !!user && !!accessToken,
     refetchInterval: 60000,
   })
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  const unreadCount = data?.unreadCount ?? 0
 
   const handleLogout = () => {
     logout()

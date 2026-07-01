@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -77,6 +78,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function Overview() {
   const { user, accessToken } = useAuth()
   const navigate = useNavigate()
+  const [showAllCircles, setShowAllCircles] = useState(false)
 
   const { data: stats } = useQuery({
     queryKey: ['stats', user?.id],
@@ -90,6 +92,9 @@ export default function Overview() {
     if (h < 17) return 'Good afternoon'
     return 'Good evening'
   }
+
+  const visibleCircles = (stats?.activeCirclesList ?? []).slice(0, showAllCircles ? undefined : 4)
+  const hasMoreCircles = (stats?.activeCirclesList?.length ?? 0) > 4
 
   return (
     <div className="p-6 max-w-[1100px] mx-auto">
@@ -182,16 +187,18 @@ export default function Overview() {
         <div className="lg:col-span-2 bg-surface rounded-xl border border-border p-5 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-text-base">Active circles</h2>
-            <button
-              onClick={() => navigate('/members')}
-              className="text-xs text-blue-accent flex items-center gap-1 hover:opacity-80 transition-opacity"
-            >
-              View all <ArrowRightIcon className="w-3 h-3" />
-            </button>
+            {hasMoreCircles && (
+              <button
+                onClick={() => setShowAllCircles(v => !v)}
+                className="text-xs text-blue-accent flex items-center gap-1 hover:opacity-80 transition-opacity"
+              >
+                {showAllCircles ? 'Show less' : 'View all'} <ArrowRightIcon className="w-3 h-3" />
+              </button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto">
-            {stats?.activeCirclesList && stats.activeCirclesList.length > 0 ? (
-              stats.activeCirclesList.map(c => <CircleRow key={c.id} circle={c} />)
+            {visibleCircles.length > 0 ? (
+              visibleCircles.map(c => <CircleRow key={c.id} circle={c} />)
             ) : (
               <p className="text-sm text-text-ghost text-center py-8">No active circles.</p>
             )}

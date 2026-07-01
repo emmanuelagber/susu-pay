@@ -213,7 +213,10 @@ export default function MemberDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={switchRole}
+            onClick={() => {
+              switchRole('admin')
+              navigate('/overview')
+            }}
             className="text-[11px] text-text-ghost hover:text-text-dim border border-border rounded px-2 py-1"
           >
             Switch to admin view

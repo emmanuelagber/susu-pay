@@ -30,10 +30,15 @@ export default function CreateCircle() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<CreateCircleFormData>(DEFAULT_FORM)
   const [members, setMembers] = useState<Member[]>([])
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const createMutation = useMutation({
-    mutationFn: () => user && accessToken ? apiCreateCircle(form, user.id, accessToken) : Promise.reject('No auth token'),
+    mutationFn: () => {
+      if (!user || !accessToken) throw new Error('No auth token')
+      if (members.length === 0) throw new Error('Please add at least one member before creating the circle.')
+      return apiCreateCircle(form, user.id, accessToken)
+    },
     onSuccess: async (c) => {
       // persist staged members to backend
       if (members.length > 0 && accessToken) {
@@ -56,12 +61,23 @@ export default function CreateCircle() {
     if (step === 1) return form.plan !== null
     if (step === 2) return !!(form.name && form.contribution && form.maxMembers && form.startDate)
     if (step === 3) return true
-    return true
+    return members.length > 0
   }
 
   const handleNext = () => {
-    if (step < 4) setStep(s => s + 1)
-    else createMutation.mutate()
+    if (step < 4) {
+      setSubmitError(null)
+      setStep(s => s + 1)
+      return
+    }
+
+    if (members.length === 0) {
+      setSubmitError('Please add at least one member before creating the circle.')
+      return
+    }
+
+    setSubmitError(null)
+    createMutation.mutate()
   }
 
   const handleBack = () => {
@@ -78,6 +94,11 @@ export default function CreateCircle() {
 
       {/* Step content */}
       <div className="bg-surface rounded-2xl border border-border p-6 mb-5 min-h-[400px]">
+        {submitError && (
+          <div className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            {submitError}
+          </div>
+        )}
         {step === 1 && (
           <Step1Plan
             selected={form.plan}
@@ -111,9 +132,7 @@ export default function CreateCircle() {
 
         <div className="flex items-center gap-2">
           {step === 3 && members.length === 0 && (
-            <Button variant="ghost" onClick={() => setStep(4)}>
-              Add members later
-            </Button>
+            <span className="text-xs text-text-ghost">Add at least one member before launching the circle.</span>
           )}
           <Button
             variant="primary"

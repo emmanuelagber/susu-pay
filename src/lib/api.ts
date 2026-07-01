@@ -440,6 +440,20 @@ export async function apiMarkMemberNotificationsRead(memberId: string, token: st
   return response.data
 }
 
+export async function apiMarkNotificationRead(
+  userId: string,
+  role: 'admin' | 'member',
+  notificationId: string,
+  token: string,
+): Promise<boolean> {
+  const basePath = role === 'member' ? `/members/${userId}` : `/admin/${userId}`
+  const response = await apiRequest<{ success: boolean; data: boolean }>(`${basePath}/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+  }, token)
+
+  return response.data
+}
+
 export async function apiTriggerPayout(circleId: string, token: string, adminOverride = false): Promise<any> {
   const params = new URLSearchParams({ adminOverride: String(adminOverride) })
   const response = await apiRequest<{ success: boolean; data: any }>(`/circles/${circleId}/payout?${params.toString()}`, {
