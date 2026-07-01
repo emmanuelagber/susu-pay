@@ -1,25 +1,33 @@
-import { USE_MOCK, apiGet, apiPost } from './_client'
-import { mock_getUnmatchedTransactions, mock_matchTransaction } from '../mocks/transactions'
+import { apiGet, apiPost } from './_client'
 import type { UnmatchedTransaction, MatchResult } from '../types/sprint2'
 
+interface ReconciliationMatchResponse {
+  unmatchedCount: number
+  unmatchedTransactions: UnmatchedTransaction[]
+}
+
 export async function getUnmatchedTransactions(
+  adminId: string,
   circleId: string,
   token: string,
 ): Promise<UnmatchedTransaction[]> {
-  if (USE_MOCK) return mock_getUnmatchedTransactions(circleId)
-  return apiGet<UnmatchedTransaction[]>(`/circles/${circleId}/transactions/unmatched`, token)
+  const data = await apiGet<ReconciliationMatchResponse>(
+    `/admin/${adminId}/circles/${circleId}/reconciliation/match`,
+    token,
+  )
+
+  return data.unmatchedTransactions ?? []
 }
 
 export async function matchTransaction(
+  adminId: string,
   transactionId: string,
   memberId: string,
-  circleId: string,
   token: string,
 ): Promise<MatchResult> {
-  if (USE_MOCK) return mock_matchTransaction(transactionId, memberId, circleId)
   return apiPost<MatchResult>(
-    `/circles/${circleId}/transactions/${transactionId}/match`,
-    { memberId },
+    `/admin/${adminId}/reconciliation/match`,
+    { transactionId, memberId },
     token,
   )
 }

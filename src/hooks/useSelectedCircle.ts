@@ -20,7 +20,7 @@ export function useSelectedCircle(): {
     enabled: !!user && !!accessToken,
   })
 
-  // Guard: real API may return a paginated object instead of a flat array
+  // Guard
   const circles: Circle[] = Array.isArray(rawData)
     ? rawData
     : Array.isArray((rawData as unknown as Record<string, unknown>)?.items)

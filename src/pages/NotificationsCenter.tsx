@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getNotifications, markAllNotificationsRead } from '../api/notifications'
+import { getNotifications, markNotificationRead } from '../api/notifications'
 import { useAuth } from '../context/AuthContext'
 import type { NotificationFeedItem, NotificationCategory } from '../types/sprint2'
 import {
@@ -23,17 +23,24 @@ function relativeTime(iso: string): string {
 
 function NotifIcon({ type }: { type: NotificationFeedItem['type'] }) {
   const base = 'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0'
-  if (type === 'payment_confirmed' || type === 'partial_payment') {
+  if (type === 'payment_confirmed' || type === 'payment_received' || type === 'partial_payment') {
     return (
       <div className={`${base} bg-green-accent/15`}>
         <CheckIcon className="w-4 h-4 text-green-accent" />
       </div>
     )
   }
-  if (type === 'payout_released') {
+  if (type === 'payout_triggered' || type === 'payout_completed' || type === 'payout_released') {
     return (
       <div className={`${base} bg-blue-accent/15`}>
         <WalletIcon className="w-4 h-4 text-blue-accent" />
+      </div>
+    )
+  }
+  if (type === 'payout_failed') {
+    return (
+      <div className={`${base} bg-danger/15`}>
+        <WalletIcon className="w-4 h-4 text-danger" />
       </div>
     )
   }
@@ -51,7 +58,7 @@ function NotifIcon({ type }: { type: NotificationFeedItem['type'] }) {
       </div>
     )
   }
-  if (type === 'match_resolved') {
+  if (type === 'match_resolved' || type === 'circle_paused' || type === 'circle_resumed' || type === 'circle_completed') {
     return (
       <div className={`${base} bg-amber-accent/15`}>
         <ArrowRightIcon className="w-4 h-4 text-amber-accent" />
@@ -65,12 +72,17 @@ function NotifIcon({ type }: { type: NotificationFeedItem['type'] }) {
   )
 }
 
-function NotifItem({ item }: { item: NotificationFeedItem }) {
+function NotifItem({ item, onMarkRead, isPending }: { item: NotificationFeedItem; onMarkRead: (id: string) => void; isPending: boolean }) {
   return (
-    <div className={[
-      'flex items-start gap-3 px-5 py-4 border-b border-border last:border-0 transition-colors',
-      item.isRead ? '' : 'bg-blue-accent/[0.03]',
-    ].join(' ')}>
+    <button
+      type="button"
+      onClick={() => !item.isRead && onMarkRead(item.id)}
+      disabled={item.isRead || isPending}
+      className={[
+        'w-full flex items-start gap-3 px-5 py-4 border-b border-border last:border-0 transition-colors text-left',
+        item.isRead ? '' : 'bg-blue-accent/[0.03] hover:bg-blue-accent/[0.05]',
+      ].join(' ')}
+    >
       <NotifIcon type={item.type} />
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
@@ -85,11 +97,11 @@ function NotifItem({ item }: { item: NotificationFeedItem }) {
           </div>
         </div>
         <p className="text-xs text-text-ghost mt-0.5 leading-relaxed">{item.body}</p>
-        {item.meta?.circleName && (
-          <p className="text-[11px] text-text-ghost mt-1 opacity-60">{item.meta.circleName}</p>
+        {(item.circleName || item.meta?.circleName) && (
+          <p className="text-[11px] text-text-ghost mt-1 opacity-60">{item.circleName ?? item.meta?.circleName}</p>
         )}
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -100,22 +112,32 @@ export default function NotificationsCenter() {
 
   const role = user?.role ?? 'admin'
 
-  const { data: notifications = [], isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['notifications', user?.id, role],
     queryFn: () => getNotifications(user!.id, role, accessToken!),
     enabled: !!user && !!accessToken,
-    refetchInterval: 60000,
+    retry: 1,
   })
 
+  const notifications = data?.items ?? []
+
   const markReadMutation = useMutation({
-    mutationFn: () => markAllNotificationsRead(user!.id, role, accessToken!),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notifications', user?.id] })
+    mutationFn: ({ notificationId }: { notificationId: string }) => markNotificationRead(user!.id, role, notificationId, accessToken!),
+    onSuccess: (_data, variables) => {
+      qc.setQueryData(['notifications', user?.id, role], (old: { items?: NotificationFeedItem[]; unreadCount?: number } | undefined) => {
+        if (!old) return old
+        return {
+          ...old,
+          unreadCount: Math.max(0, (old.unreadCount ?? 0) - 1),
+          items: (old.items ?? []).map(item => item.id === variables.notificationId ? { ...item, isRead: true } : item),
+        }
+      })
+      qc.invalidateQueries({ queryKey: ['notifications', user?.id, role] })
     },
   })
 
   const filtered = notifications.filter(n => filter === 'all' || n.category === filter)
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  const unreadCount = data?.unreadCount ?? notifications.filter(n => !n.isRead).length
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: 'all',     label: 'All' },
@@ -135,13 +157,7 @@ export default function NotificationsCenter() {
           )}
         </div>
         {unreadCount > 0 && (
-          <button
-            onClick={() => markReadMutation.mutate()}
-            disabled={markReadMutation.isPending}
-            className="text-xs text-blue-accent hover:text-blue-accent/80 transition-colors disabled:opacity-50"
-          >
-            {markReadMutation.isPending ? 'Marking read…' : 'Mark all read'}
-          </button>
+          <p className="text-xs text-text-ghost">Tap an unread item to mark it read</p>
         )}
       </div>
 
@@ -183,7 +199,14 @@ export default function NotificationsCenter() {
             </p>
           </div>
         ) : (
-          filtered.map(n => <NotifItem key={n.id} item={n} />)
+          filtered.map(n => (
+            <NotifItem
+              key={n.id}
+              item={n}
+              onMarkRead={(notificationId) => markReadMutation.mutate({ notificationId })}
+              isPending={markReadMutation.isPending && markReadMutation.variables?.notificationId === n.id}
+            />
+          ))
         )}
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Outlet, Navigate, useLocation } from 'react-router-dom'
+import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Sidebar from './Sidebar'
 import Avatar from '../ui/Avatar'
@@ -9,6 +9,7 @@ export default function AppLayout() {
   const { user, switchRole } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
 
   // Close drawer whenever the route changes (nav item tapped)
   useEffect(() => setSidebarOpen(false), [location.pathname])
@@ -64,9 +65,12 @@ export default function AppLayout() {
 
           {/* Demo role switcher — hidden on very small screens */}
           <button
-            onClick={switchRole}
+            onClick={() => {
+              switchRole('member')
+              navigate('/member')
+            }}
             className="hidden sm:block text-[11px] text-text-ghost hover:text-text-dim border border-border rounded px-2 py-1 transition-colors"
-            title="Switch to member view (demo)"
+            title="Switch to member view"
           >
             Member view
           </button>

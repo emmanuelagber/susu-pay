@@ -25,4 +25,3 @@ export const apiPost = <T>(path: string, body: unknown, token: string) =>
 export const apiPatch = <T>(path: string, body: unknown, token: string) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, token)
 
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true'
