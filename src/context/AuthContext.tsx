@@ -15,24 +15,24 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 const STORAGE_KEY = 'susu-auth'
 
+function loadStoredAuth(): AuthResponse | null {
+  if (typeof window === 'undefined') return null
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (!stored) return null
+
+  try {
+    return JSON.parse(stored) as AuthResponse
+  } catch {
+    localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [accessToken, setAccessToken] = useState<string | null>(null)
-  const [refreshToken, setRefreshToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return
-
-    try {
-      const parsed = JSON.parse(stored) as AuthResponse
-      setUser(parsed.user)
-      setAccessToken(parsed.accessToken)
-      setRefreshToken(parsed.refreshToken)
-    } catch {
-      localStorage.removeItem(STORAGE_KEY)
-    }
-  }, [])
+  const initialAuth = loadStoredAuth()
+  const [user, setUser] = useState<AuthUser | null>(initialAuth?.user ?? null)
+  const [accessToken, setAccessToken] = useState<string | null>(initialAuth?.accessToken ?? null)
+  const [refreshToken, setRefreshToken] = useState<string | null>(initialAuth?.refreshToken ?? null)
 
   const login = (auth: AuthResponse) => {
     setUser(auth.user)

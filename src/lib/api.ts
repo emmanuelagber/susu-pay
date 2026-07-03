@@ -12,6 +12,10 @@ import type {
   DashboardStats,
   ReportsData,
   CreateCircleFormData,
+  Plan,
+  Frequency,
+  PayoutOrder,
+  CircleStatus,
 } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL
@@ -291,14 +295,106 @@ export async function apiGetCircles(adminId: string, token: string, page = 1, pa
   return response.data
 }
 
+function planFromApi(value: number | string | null): Plan {
+  return value === 1 || String(value) === '1' ? 'ADASHI' : 'BAM'
+}
+
+function frequencyFromApi(value: number | string | null): Frequency {
+  switch (Number(value)) {
+    case 0:
+      return 'Weekly'
+    case 1:
+      return 'Fortnightly'
+    default:
+      return 'Monthly'
+  }
+}
+
+function payoutOrderFromApi(value: number | string | null): PayoutOrder {
+  switch (Number(value)) {
+    case 1:
+      return 'Random'
+    case 2:
+      return 'Bidding'
+    default:
+      return 'Sequential'
+  }
+}
+
+function circleStatusFromApi(value: number | string | null): CircleStatus {
+  switch (Number(value)) {
+    case 1:
+      return 'active'
+    case 2:
+      return 'completed'
+    default:
+      return 'pending'
+  }
+}
+
+function memberStatusFromApi(value: number | string | null): MemberStatus | undefined {
+  switch (Number(value)) {
+    case 2:
+      return 'paid'
+    case 1:
+      return 'overdue'
+    default:
+      return 'pending'
+  }
+}
+
+function contributionStatusFromApi(value: number | string | null): string {
+  switch (Number(value)) {
+    case 2:
+      return 'paid'
+    case 1:
+      return 'partial'
+    case 0:
+      return 'unpaid'
+    default:
+      return 'pending'
+  }
+}
+
 export async function apiGetCircle(id: string, token: string): Promise<Circle | null> {
   try {
     const response = await apiRequest<{
       success: boolean
-      data: Circle
+      data: {
+        id: string
+        name: string
+        description?: string
+        plan: number
+        contributionAmount: number
+        frequency: number
+        maxMembers: number
+        currentMemberCount: number
+        currentCycle: number
+        status: number
+        payoutOrder: number
+        startDate: string
+        nextContributionDate?: string
+        adminName?: string
+      }
     }>(`/circles/${id}`, {}, token)
 
-    return response.data
+    const circle = response.data
+    return {
+      id: circle.id,
+      name: circle.name,
+      description: circle.description,
+      plan: planFromApi(circle.plan),
+      contribution: circle.contributionAmount,
+      frequency: frequencyFromApi(circle.frequency),
+      members: [],
+      maxMembers: circle.maxMembers,
+      cycle: circle.currentCycle,
+      totalCycles: circle.currentCycle,
+      startDate: circle.startDate,
+      payoutOrder: payoutOrderFromApi(circle.payoutOrder),
+      status: circleStatusFromApi(circle.status),
+      createdAt: circle.startDate,
+    }
   } catch {
     return null
   }
@@ -377,10 +473,37 @@ export async function apiGetMember(id: string, token: string): Promise<Member | 
   try {
     const response = await apiRequest<{
       success: boolean
-      data: Member
+      data: {
+        id: string
+        circleId: string
+        name: string
+        phone: string
+        email: string
+        payoutPosition: number
+        virtualAccountNumber: string
+        bankName?: string
+        status: number
+        creditScore?: number
+        creditTier?: string
+        consecutiveOnTimeStreak?: number
+        joinedAt: string
+      }
     }>(`/members/${id}`, {}, token)
 
-    return response.data
+    const member = response.data
+    return {
+      id: member.id,
+      name: member.name,
+      initials: generateInitials(member.name),
+      phone: member.phone,
+      email: member.email,
+      virtualAccount: member.virtualAccountNumber ?? undefined,
+      payoutPosition: member.payoutPosition,
+      status: memberStatusFromApi(member.status),
+      joinedAt: member.joinedAt,
+      circleId: member.circleId,
+      circleName: undefined,
+    }
   } catch {
     return null
   }
@@ -402,34 +525,46 @@ export async function apiGetMemberPassport(id: string, token: string): Promise<s
   return response.text()
 }
 
-export async function apiGetContributionBoard(circleId: string, token: string, cycle?: number): Promise<any[]> {
-  const params = new URLSearchParams()
-  if (cycle) params.set('cycle', String(cycle))
-  const response = await apiRequest<{
-    success: boolean
-    data: any[]
-  }>(`/circles/${circleId}/board${params.toString() ? `?${params.toString()}` : ''}`, {}, token)
-
-  return response.data
-}
-
 export async function apiGetMemberContributions(memberId: string, token: string): Promise<ContributionRecord[]> {
   const response = await apiRequest<{
     success: boolean
-    data: ContributionRecord[]
+    data: Array<{
+      id: string
+      cycleNumber: number
+      expectedAmount: number
+      paidAmount: number
+      balance: number
+      creditApplied: number
+      status: number
+      dueDate: string
+      paidAt: string
+    }>
   }>(`/members/${memberId}/contributions`, {}, token)
 
-  return response.data
+  return response.data.map(item => ({
+    id: item.id,
+    cycle: item.cycleNumber,
+    amount: item.paidAmount,
+    status: contributionStatusFromApi(item.status),
+    dueDate: item.dueDate,
+    paidAt: item.paidAt,
+    createdAt: item.paidAt,
+  }))
 }
 
 export async function apiGetMemberNotifications(memberId: string, token: string, page = 1, pageSize = 20): Promise<NotificationItem[]> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
   const response = await apiRequest<{
     success: boolean
-    data: NotificationItem[]
+    data: {
+      items: NotificationItem[]
+      total?: number
+      page?: number
+      pageSize?: number
+    }
   }>(`/members/${memberId}/notifications?${params.toString()}`, {}, token)
 
-  return response.data
+  return Array.isArray(response.data) ? response.data : response.data.items ?? []
 }
 
 export async function apiMarkMemberNotificationsRead(memberId: string, token: string): Promise<boolean> {
