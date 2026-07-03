@@ -143,14 +143,15 @@ export const ADMIN_USER: AuthUser = {
   role: 'admin',
 }
 
+// No real circleId/memberId here on purpose — this demo switcher (AppLayout's "Member view"
+// button) has no logged-in member to pull real ids from, so MemberDashboard falls back to the
+// real DB member id (FALLBACK_MEMBER_ID) instead of hitting fake mock ids like 'm1'/'c1'.
 export const MEMBER_USER: AuthUser = {
   id: 'm1',
   name: 'Chidi Kalu',
   initials: 'CK',
   email: 'chidi@example.com',
   role: 'member',
-  circleId: 'c1',
-  memberId: 'm1',
 }
 
 export const DASHBOARD_STATS: DashboardStats = {
