@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AuthResponse, AuthTokens, AuthUser } from '../types'
-import { ADMIN_USER, MEMBER_USER } from '../lib/dummy-data'
+// import { ADMIN_USER, MEMBER_USER } from '../lib/dummy-data'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -9,7 +9,7 @@ interface AuthContextValue {
   refreshToken: string | null
   login: (auth: AuthResponse) => void
   logout: () => void
-  switchRole: (nextRole?: 'admin' | 'member') => void
+  // switchRole: (nextRole?: 'admin' | 'member') => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -48,20 +48,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  const switchRole = (nextRole?: 'admin' | 'member') => {
-    if (!user) return
+  // const switchRole = (nextRole?: 'admin' | 'member') => {
+  //   if (!user) return
 
-    const resolvedRole = nextRole ?? (user.role === 'admin' ? 'member' : 'admin')
-    const nextUser = resolvedRole === 'admin' ? ADMIN_USER : MEMBER_USER
+  //   const resolvedRole = nextRole ?? (user.role === 'admin' ? 'member' : 'admin')
+  //   const nextUser = resolvedRole === 'admin' ? ADMIN_USER : MEMBER_USER
 
-    setUser(nextUser)
-    setAccessToken(accessToken)
-    setRefreshToken(refreshToken)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: nextUser, accessToken, refreshToken }))
-  }
+  //   setUser(nextUser)
+  //   setAccessToken(accessToken)
+  //   setRefreshToken(refreshToken)
+  //   localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: nextUser, accessToken, refreshToken }))
+  // }
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, refreshToken, login, logout, switchRole }}>
+    <AuthContext.Provider value={{ user, accessToken, refreshToken, login, logout, }}>
       {children}
     </AuthContext.Provider>
   )

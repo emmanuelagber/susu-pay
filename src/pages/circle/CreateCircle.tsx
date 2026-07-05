@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { apiCreateCircle, apiAddMember } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { getErrorMessages } from '../../lib/errors'
 import Stepper from '../../components/ui/Stepper'
 import Button from '../../components/ui/Button'
 import { ArrowLeftIcon, ArrowRightIcon } from '../../components/ui/Icons'
@@ -25,12 +26,17 @@ const DEFAULT_FORM: CreateCircleFormData = {
   description: '',
 }
 
+function getMaxMembersForPlan(plan: CreateCircleFormData['plan']) {
+  return plan === 'ADASHI' ? 50 : 12
+}
+
 export default function CreateCircle() {
   const { user, accessToken } = useAuth()
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<CreateCircleFormData>(DEFAULT_FORM)
   const [members, setMembers] = useState<Member[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
+
   const navigate = useNavigate()
 
   const createMutation = useMutation({
@@ -40,16 +46,36 @@ export default function CreateCircle() {
       return apiCreateCircle(form, user.id, accessToken)
     },
     onSuccess: async (c) => {
-      // persist staged members to backend
+      let failedMembers: Member[] = []
+
       if (members.length > 0 && accessToken) {
-        try {
-          await Promise.all(members.map(m => apiAddMember(c.id, { name: m.name, phone: m.phone ?? '', email: m.email }, accessToken)))
-        } catch (err) {
-          // swallow for now; optionally surface toast
-          console.error('Failed to add members after circle creation', err)
+        const results = await Promise.allSettled(
+          members.map(m =>
+            apiAddMember(c.id, { name: m.name, phone: m.phone ?? '', email: m.email }, accessToken)
+          )
+        )
+
+        failedMembers = results
+          .map((result, i) => ({ result, member: members[i] }))
+          .filter(({ result }) => result.status === 'rejected')
+          .map(({ member }) => member)
+
+        if (failedMembers.length > 0) {
+          console.error(
+            `Failed to add ${failedMembers.length} of ${members.length} member(s):`,
+            failedMembers.map(m => m.name)
+          )
         }
       }
-      navigate(`/circle/${c.id}/members`)
+
+      navigate(`/members?circleId=${c.id}`, {
+        state: failedMembers.length > 0
+          ? { memberAddErrors: failedMembers.map(m => m.name) }
+          : undefined,
+      })
+    },
+    onError: (error) => {
+      setSubmitError(getErrorMessages(error, 'Failed to create circle.').join(' '))
     },
   })
 
@@ -59,7 +85,12 @@ export default function CreateCircle() {
 
   const canNext = () => {
     if (step === 1) return form.plan !== null
-    if (step === 2) return !!(form.name && form.contribution && form.maxMembers && form.startDate)
+    if (step === 2) {
+      const maxMembers = Number(form.maxMembers)
+      return !!(form.name && form.contribution && form.maxMembers && form.startDate) &&
+        maxMembers > 0 &&
+        maxMembers <= getMaxMembersForPlan(form.plan)
+    }
     if (step === 3) return true
     return members.length > 0
   }

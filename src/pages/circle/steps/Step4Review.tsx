@@ -45,7 +45,7 @@ export default function Step4Review({ data, members }: Step4Props) {
             <Badge variant="muted">{members.length} added</Badge>
           </div>
           {members.length === 0 ? (
-            <p className="text-xs text-text-ghost py-4 text-center">No members added. You can add them after launch.</p>
+            <p className="text-xs text-red-300 py-4 text-center">No members added, please add a member before creating a circle</p>
           ) : (
             <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
               {members.map((m, i) => (

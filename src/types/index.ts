@@ -32,6 +32,22 @@ export interface ContributionRecord {
   createdAt?: string
 }
 
+
+
+export interface ContributionsSummary {
+  memberId: string
+  circleName: string
+  totalPayments: number
+  onTimeCount: number
+  resolvedCycleCount: number
+  onTimeRatePercent: number
+  totalContributed: number
+  circlePaidCount: number
+  circleTotalMembers: number
+  circleCollectionRatePercent: number
+  history: ContributionRecord[]
+}
+
 export interface NotificationItem {
   id: string
   title?: string

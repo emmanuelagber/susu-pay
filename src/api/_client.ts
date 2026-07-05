@@ -1,17 +1,29 @@
+import { createApiError, reportGlobalError } from '../lib/errors'
+
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
 async function request<T>(path: string, init: RequestInit, token?: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  })
+  let res: Response
+
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    })
+  } catch (error) {
+    reportGlobalError(error, 'Network request failed.')
+    throw error
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => null)
-    throw new Error(body?.message ?? res.statusText ?? 'Request failed')
+    const error = createApiError(body, res.status, res.statusText)
+    reportGlobalError(error)
+    throw error
   }
   return res.json().then((r: { data?: T } & T) => (r as { data?: T }).data ?? r)
 }
@@ -24,4 +36,3 @@ export const apiPost = <T>(path: string, body: unknown, token: string) =>
 
 export const apiPatch = <T>(path: string, body: unknown, token: string) =>
   request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, token)
-

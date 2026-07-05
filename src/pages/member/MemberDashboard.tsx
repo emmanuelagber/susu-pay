@@ -9,7 +9,7 @@ import {
   apiGetMemberNotifications,
   apiMarkMemberNotificationsRead,
 } from '../../lib/api'
-import { getPayoutCycleInfo } from '../../api/payouts'
+import { getMemberPayoutInfo, getPayoutCycleInfo } from '../../api/payouts'
 import Badge from '../../components/ui/Badge'
 import Avatar from '../../components/ui/Avatar'
 import Button from '../../components/ui/Button'
@@ -17,17 +17,14 @@ import {
   CopyIcon, CheckIcon, InfoIcon, LogOutIcon, CircleLogo,
   BellIcon, WalletIcon, ReceiptIcon, ArrowRightIcon,
 } from '../../components/ui/Icons'
-import type { ContributionRecord, NotificationItem, Circle, Member } from '../../types'
+import type { ContributionsSummary, NotificationItem, Circle, Member } from '../../types'
 import type { PayoutCycleInfo, PayoutQueueEntry } from '../../types/sprint2'
+import MemberDashboardSkeleton from './MemberDashboardSkeleton'
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
 type Tab = 'home' | 'contributions' | 'payout' | 'notifications'
 
-// There's no member self-service login yet, so a logged-in member/admin session has no
-// memberId of their own to drive these endpoints. This id is only used as a fallback when
-// user.memberId is missing — remove once member auth issues a real memberId per session.
-const FALLBACK_MEMBER_ID = 'ebd91642-1dd5-40ba-9a93-41a0a753ec82'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -191,6 +188,7 @@ function HomeTab({
   const virtualAccount = memberProfile?.virtualAccount
   const accountName = memberProfile?.name ?? '—'
   const payoutPos = memberProfile?.payoutPosition
+  const payoutPosDisplay : number | null = payoutPos != null ? payoutPos + 1 : null
   const memberCount = totalMembers ?? (circle as any)?.currentMemberCount ?? (circle as any)?.members?.length
 
   return (
@@ -218,8 +216,8 @@ function HomeTab({
         />
         <StatBox
           label="My payout position"
-          primary={payoutPos ? `#${payoutPos}` : '—'}
-          secondary={payoutPos ? `${payoutPos}${ordinal(payoutPos)} to receive payout` : undefined}
+          primary={payoutPosDisplay != null ? `#${payoutPosDisplay}` : '—'}
+        secondary={payoutPosDisplay !== null ? `${payoutPosDisplay}${ordinal(payoutPosDisplay)} to receive payout` : undefined}
           accent="text-blue-accent"
         />
         <StatBox
@@ -316,33 +314,31 @@ function HomeTab({
 // ─── Contributions tab ────────────────────────────────────────────────────────
 
 function ContributionsTab({
-  contributions,
-  payoutInfo,
+  summary,
 }: {
-  contributions: ContributionRecord[]
-  payoutInfo: PayoutCycleInfo | null | undefined
+  summary: ContributionsSummary | null | undefined
 }) {
-  const totalPaid = contributions.filter(c => c.status === 'paid').length
-  const totalAmount = contributions.reduce((sum, c) => sum + (c.amount ?? 0), 0)
-  const onTimePct = contributions.length > 0
-    ? Math.round((totalPaid / contributions.length) * 100)
-    : 0
-  const collected = payoutInfo?.membersCollected ?? 0
-  const totalMembers = payoutInfo?.totalMembers ?? 0
-  const collectedPct = totalMembers > 0 ? Math.round((collected / totalMembers) * 100) : 0
+  const contributions = summary?.history ?? []
+  const totalPaid = summary?.onTimeCount ?? 0
+  const totalPayments = summary?.totalPayments ?? contributions.length
+  const onTimePct = summary?.onTimeRatePercent ?? 0
+  const totalAmount = summary?.totalContributed ?? 0
+  const collected = summary?.circlePaidCount ?? 0
+  const totalMembers = summary?.circleTotalMembers ?? 0
+  const collectedPct = summary?.circleCollectionRatePercent ?? 0
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-3 gap-3">
         <StatBox
           label="Total payments"
-          primary={String(contributions.length)}
+          primary={String(totalPayments)}
           secondary="all cycles"
         />
         <StatBox
           label="Paid on time"
-          primary={`${totalPaid}/${contributions.length}`}
-          secondary={contributions.length > 0 ? `${onTimePct}% rate` : undefined}
+          primary={`${totalPaid}/${totalPayments}`}
+          secondary={totalPayments > 0 ? `${onTimePct}% rate` : undefined}
           accent="text-green-accent"
         />
         <StatBox
@@ -357,7 +353,7 @@ function ContributionsTab({
         <div className="bg-surface rounded-xl border border-border p-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-text-ghost">
-              Circle {payoutInfo?.circleName ? `"${payoutInfo.circleName}" ` : ''}
+              Circle {summary?.circleName ? `"${summary.circleName}" ` : ''}
               collection this cycle
             </p>
             <p className="text-xs text-text-dim tabular">{collected}/{totalMembers} paid · {collectedPct}%</p>
@@ -404,7 +400,7 @@ function ContributionsTab({
                     className="border-b border-border last:border-0 hover:bg-surface-alt/40 transition-colors"
                   >
                     <td className="py-3.5 pl-5 pr-3 text-sm font-medium text-text-dim">
-                      {c.cycle ? `Cycle ${c.cycle}` : '—'}
+                      {c.cycle != null ? `Cycle ${c.cycle}` : '—'}
                     </td>
                     <td className="py-3.5 px-3 text-sm text-text-dim">
                       {c.paidAt
@@ -425,7 +421,7 @@ function ContributionsTab({
                         }
                         dot
                       >
-                        {c.status ?? 'pending'}
+                        {c.status ?? 'Unknown'}
                       </Badge>
                     </td>
                     <td className="py-3.5 pr-5 pl-3 text-sm tabular text-right">
@@ -440,7 +436,6 @@ function ContributionsTab({
           </div>
         )}
       </div>
-
     </div>
   )
 }
@@ -470,7 +465,8 @@ function PayoutTab({
 }) {
   const queue = payoutInfo?.queue ?? []
   const myEntry = queue.find(q => q.memberId === memberId)
-  const payoutPos = myEntry?.position
+  const payoutPos = myEntry?.position ?? payoutInfo?.currentRecipient?.position
+   const payoutPosDisplay : number | null = payoutPos != null ? payoutPos + 1 : null
   const paidCount = payoutInfo?.membersCollected ?? 0
   const totalCount = payoutInfo?.totalMembers ?? queue.length
   const paidPercent = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0
@@ -497,9 +493,9 @@ function PayoutTab({
 
         <div className="flex items-end gap-4 mb-5">
           <span className="text-6xl font-bold text-white tabular leading-none">
-            #{payoutPos ?? '—'}
+            #{payoutPosDisplay ?? '—'}
           </span>
-          {payoutPos && totalCount > 0 && (
+          {payoutPosDisplay !== null && totalCount > 0 && (
             <div className="mb-1 space-y-1.5">
               <Badge variant="blue">
                 {payoutPos === 1 ? 'Next to receive' : `${aheadOfMe} member${aheadOfMe !== 1 ? 's' : ''} ahead`}
@@ -616,7 +612,7 @@ function PayoutTab({
 
 // ─── Notifications tab ────────────────────────────────────────────────────────
 
-function NotificationsTab({ memberId, token }: { memberId: string; token: string }) {
+function NotificationsTab({ memberId, token, }: { memberId: string; token: string; }) {
   const qc = useQueryClient()
 
   const { data: notifications = [], isLoading } = useQuery({
@@ -625,23 +621,26 @@ function NotificationsTab({ memberId, token }: { memberId: string; token: string
     enabled: !!memberId && !!token,
   })
 
+  const unread = notifications.filter(n => !n.isRead)
+
   const markAllMutation = useMutation({
-    mutationFn: () => apiMarkMemberNotificationsRead(memberId, token),
+    mutationFn: () => Promise.allSettled(
+        unread.map(n => apiMarkMemberNotificationsRead(memberId, token, n.id))
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['member-notifs-full', memberId] })
       qc.invalidateQueries({ queryKey: ['member-notifications', memberId] })
     },
   })
 
-  const unread = notifications.filter(n => !n.isRead).length
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-ghost">
-          {isLoading ? 'Loading…' : unread > 0 ? `${unread} unread` : 'All caught up'}
+          {isLoading ? 'Loading…' : unread.length > 0 ? `${unread.length} unread` : '0 unread'}.
         </p>
-        {unread > 0 && (
+        {unread.length > 0 && (
           <Button
             variant="secondary"
             size="sm"
@@ -713,16 +712,14 @@ function NotificationsTab({ memberId, token }: { memberId: string; token: string
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function MemberDashboard() {
-  const { user, accessToken, logout, switchRole } = useAuth()
+  const { user, accessToken, logout, } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('home')
 
-  // Fall back to a known member id only when the session has none of its own —
-  // real member auth hasn't been built yet, so this keeps the portal usable in the meantime.
-  const memberId = user?.memberId || FALLBACK_MEMBER_ID
+  const memberId = user?.id || ''
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null)
 
-  const { data: memberProfile } = useQuery({
+  const { data: memberProfile, isLoading: isMemberProfileLoading } = useQuery({
     queryKey: ['member-profile', memberId],
     queryFn: () => apiGetMember(memberId, accessToken!),
     enabled: !!memberId && !!accessToken,
@@ -739,7 +736,7 @@ export default function MemberDashboard() {
   const defaultCircleId = user?.circleId || memberProfile?.circleId || ''
   const circleId = selectedCircleId || defaultCircleId
 
-  const { data: circle } = useQuery({
+  const { data: circle, isLoading: isCircleLoading } = useQuery({
     queryKey: ['circle', circleId],
     queryFn: () => apiGetCircle(circleId, accessToken!),
     enabled: !!circleId && !!accessToken,
@@ -747,16 +744,16 @@ export default function MemberDashboard() {
 
   const circleOptions = circle ? [{ id: circle.id, name: circle.name, plan: circle.plan }] : []
 
-  const { data: contributions = [] } = useQuery({
+  const { data: contributionsSummary } = useQuery({
     queryKey: ['member-contributions', memberId],
     queryFn: () => apiGetMemberContributions(memberId, accessToken!),
     enabled: !!memberId && !!accessToken,
   })
 
   const { data: payoutInfo } = useQuery({
-    queryKey: ['payout-board', circleId],
-    queryFn: () => getPayoutCycleInfo(circleId, accessToken!),
-    enabled: !!circleId && !!accessToken,
+    queryKey: ['member-payout-info', memberId],
+    queryFn: () => getMemberPayoutInfo(memberId, accessToken!),
+    enabled: !!memberId && !!accessToken,
   })
 
   const { data: recentNotifs = [] } = useQuery({
@@ -779,6 +776,12 @@ export default function MemberDashboard() {
     return 'Good evening'
   }
 
+  if (isMemberProfileLoading || isCircleLoading) {
+    return (
+      <MemberDashboardSkeleton />
+    )
+  } 
+
   return (
     <div className="min-h-screen" style={{ background: '#080F1A' }}>
       {/* Topbar */}
@@ -798,14 +801,14 @@ export default function MemberDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
-          {user?.role === 'admin' && (
-            <button
-              onClick={() => { switchRole('admin'); navigate('/overview') }}
-              className="text-[11px] text-text-ghost hover:text-text-dim border border-border rounded-lg px-2.5 py-1 transition-colors"
-            >
-              Admin view
-            </button>
-          )}
+            {/* {user?.role === 'admin' && (
+              <button
+                onClick={() => { switchRole('admin'); navigate('/overview') }}
+                className="text-[11px] text-text-ghost hover:text-text-dim border border-border rounded-lg px-2.5 py-1 transition-colors"
+              >
+                Admin view
+              </button>
+            )} */}
           {user && (
             <div className="flex items-center gap-2.5">
               <div className="text-right hidden sm:block">
@@ -891,10 +894,7 @@ export default function MemberDashboard() {
           />
         )}
         {tab === 'contributions' && (
-          <ContributionsTab
-            contributions={contributions}
-            payoutInfo={payoutInfo}
-          />
+         <ContributionsTab summary={contributionsSummary} />
         )}
         {tab === 'payout' && (
           <PayoutTab

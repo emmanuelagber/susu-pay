@@ -8,8 +8,8 @@ import Input from '../components/ui/Input'
 import { CircleLogo } from '../components/ui/Icons'
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@susucircle.ng')
-  const [password, setPassword] = useState('password')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
