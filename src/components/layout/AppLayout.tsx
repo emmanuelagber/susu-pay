@@ -6,7 +6,7 @@ import Avatar from '../ui/Avatar'
 import { MenuIcon } from '../ui/Icons'
 
 export default function AppLayout() {
-  const { user, switchRole } = useAuth()
+  const { user} = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -62,18 +62,6 @@ export default function AppLayout() {
 
           {/* Spacer */}
           <div className="flex-1" />
-
-          {/* Demo role switcher — hidden on very small screens */}
-          <button
-            onClick={() => {
-              switchRole('member')
-              navigate('/member')
-            }}
-            className="hidden sm:block text-[11px] text-text-ghost hover:text-text-dim border border-border rounded px-2 py-1 transition-colors"
-            title="Switch to member view"
-          >
-            Member view
-          </button>
 
           <div className="flex items-center gap-2">
             <span className="hidden sm:block text-sm text-text-dim">{user.name}</span>
