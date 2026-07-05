@@ -59,16 +59,18 @@ export interface PayoutQueueEntry {
   paidDate?: string
 }
 
+
+
 export interface PayoutCycleInfo {
-  circleId: string
-  circleName: string
-  cycleNumber: number
-  totalCycles: number
+  circleId?: string
+  circleName?: string
+  cycleNumber?: number
+  totalCycles?: number
   expectedPayoutAmount: number
   currentRecipient: PayoutQueueEntry | null
   membersCollected: number
   totalMembers: number
-  canTrigger: boolean
+  canTrigger?: boolean
   blockers: string[]
   queue: PayoutQueueEntry[]
 }

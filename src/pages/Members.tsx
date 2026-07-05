@@ -1,10 +1,15 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { apiGetAdminMembers } from '../lib/api'
+import { useSearchParams } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { apiAddMember, apiGetAdminMembers, apiGetCircles } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import Badge from '../components/ui/Badge'
 import Avatar from '../components/ui/Avatar'
-import type { Member } from '../types'
+import Button from '../components/ui/Button'
+import Input, { Select } from '../components/ui/Input'
+import { PlusIcon } from '../components/ui/Icons'
+import { getErrorMessages } from '../lib/errors'
+import type { Circle, Member } from '../types'
 
 function fmt(n: number) {
   return '₦' + n.toLocaleString('en-NG')
@@ -54,8 +59,31 @@ function MemberRow({ member, index, circleName }: { member: Member; index: numbe
 
 export default function Members() {
   const { user, accessToken } = useAuth()
+  const qc = useQueryClient()
+  const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all')
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [selectedCircleId, setSelectedCircleId] = useState(params.get('circleId') ?? '')
+  const [memberName, setMemberName] = useState('')
+  const [memberPhone, setMemberPhone] = useState('')
+  const [memberEmail, setMemberEmail] = useState('')
+  const [memberFormError, setMemberFormError] = useState<string | null>(null)
+  const [memberFormSuccess, setMemberFormSuccess] = useState<string | null>(null)
+
+  const { data: rawCircles = [] } = useQuery({
+    queryKey: ['circles', user?.id],
+    queryFn: () => apiGetCircles(user!.id, accessToken!, 1, 50),
+    enabled: !!accessToken && !!user?.id,
+  })
+
+  const circles: Circle[] = Array.isArray(rawCircles)
+    ? rawCircles
+    : Array.isArray((rawCircles as unknown as Record<string, unknown>)?.items)
+      ? ((rawCircles as unknown as Record<string, unknown>).items as Circle[])
+      : []
+
+  const resolvedCircleId = selectedCircleId || circles[0]?.id || ''
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['adminMembers', user?.id, search, filter],
@@ -64,6 +92,48 @@ export default function Members() {
       : Promise.resolve([]),
     enabled: !!accessToken && !!user?.id,
   })
+
+  const addMemberMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken) throw new Error('No auth token')
+      if (!resolvedCircleId) throw new Error('Select a circle first.')
+      if (!memberName.trim()) throw new Error('Member name is required.')
+      if (!memberPhone.trim()) throw new Error('Phone number is required.')
+
+      return apiAddMember(
+        resolvedCircleId,
+        {
+          name: memberName.trim(),
+          phone: memberPhone.trim(),
+          email: memberEmail.trim() || undefined,
+        },
+        accessToken,
+      )
+    },
+    onSuccess: () => {
+      const circle = circles.find(c => c.id === resolvedCircleId)
+      setMemberName('')
+      setMemberPhone('')
+      setMemberEmail('')
+      setMemberFormError(null)
+      setMemberFormSuccess(`Member added${circle ? ` to ${circle.name}` : ''}.`)
+      qc.invalidateQueries({ queryKey: ['adminMembers', user?.id] })
+      qc.invalidateQueries({ queryKey: ['circles', user?.id] })
+    },
+    onError: (error) => {
+      setMemberFormSuccess(null)
+      setMemberFormError(getErrorMessages(error, 'Failed to add member.').join(' '))
+    },
+  })
+
+  const handleCircleChange = (id: string) => {
+    setSelectedCircleId(id)
+    setParams(prev => {
+      if (id) prev.set('circleId', id)
+      else prev.delete('circleId')
+      return prev
+    })
+  }
 
   const filtered = members && members.filter(member => {
     const matchesSearch =
@@ -87,7 +157,82 @@ export default function Members() {
             {members.length} total · {paidCount} paid · {pendingCount} pending
           </p>
         </div>
+        <Button
+          variant="primary"
+          size="sm"
+          icon={<PlusIcon className="w-4 h-4" />}
+          onClick={() => setShowAddMember(open => !open)}
+        >
+          Add member
+        </Button>
       </div>
+
+      {showAddMember && (
+        <div className="bg-surface rounded-xl border border-border p-5 mb-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-text-base">Add member to circle</h2>
+              <p className="text-xs text-text-ghost mt-0.5">Choose an existing circle and enter the member details.</p>
+            </div>
+            {memberFormSuccess && (
+              <span className="text-xs text-green-accent">{memberFormSuccess}</span>
+            )}
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Select
+              label="Circle"
+              value={resolvedCircleId}
+              onChange={e => handleCircleChange(e.target.value)}
+              error={!resolvedCircleId ? 'Create a circle first.' : undefined}
+            >
+              <option value="">Select circle</option>
+              {circles.map(circle => (
+                <option key={circle.id} value={circle.id}>
+                  {circle.name}
+                </option>
+              ))}
+            </Select>
+            <Input
+              label="Full name"
+              value={memberName}
+              onChange={e => setMemberName(e.target.value)}
+              placeholder="John Doe"
+            />
+            <Input
+              label="Phone"
+              type="tel"
+              value={memberPhone}
+              onChange={e => setMemberPhone(e.target.value)}
+              placeholder="07036090000"
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={memberEmail}
+              onChange={e => setMemberEmail(e.target.value)}
+              placeholder="member@example.com"
+            />
+          </div>
+
+          {memberFormError && (
+            <p className="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              {memberFormError}
+            </p>
+          )}
+
+          <div className="mt-4 flex justify-end">
+            <Button
+              variant="primary"
+              loading={addMemberMutation.isPending}
+              disabled={!resolvedCircleId}
+              onClick={() => addMemberMutation.mutate()}
+            >
+              Add to circle
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">

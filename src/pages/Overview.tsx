@@ -13,6 +13,7 @@ import Button from '../components/ui/Button'
 import { PlusIcon, ArrowRightIcon } from '../components/ui/Icons'
 import { chartColors } from '../tokens'
 import type { OverviewCircle } from '../types'
+import OverviewSkeleton from '../components/overviewskeleton'
 
 function fmt(n?: number | null) {
   if (n === null || n === undefined) return '—'
@@ -80,11 +81,15 @@ export default function Overview() {
   const navigate = useNavigate()
   const [showAllCircles, setShowAllCircles] = useState(false)
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading } = useQuery({
     queryKey: ['stats', user?.id],
     queryFn: () => apiGetOverview(user!.id, accessToken!),
     enabled: !!user && !!accessToken,
   })
+
+  if(isLoading) {
+    return <OverviewSkeleton />
+  }
 
   const greeting = () => {
     const h = new Date().getHours()

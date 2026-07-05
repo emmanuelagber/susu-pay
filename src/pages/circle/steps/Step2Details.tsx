@@ -9,6 +9,13 @@ interface Step2Props {
 }
 
 export default function Step2Details({ data, onChange }: Step2Props) {
+  const planName = data.plan ?? 'BAM'
+  const maxMembersLimit = planName === 'ADASHI' ? 50 : 12
+  const maxMembersValue = Number(data.maxMembers || 0)
+  const maxMembersError = maxMembersValue > maxMembersLimit
+    ? `${planName} supports up to ${maxMembersLimit} members.`
+    : undefined
+
   return (
     <div>
       <div className="flex items-center gap-2.5 mb-5">
@@ -48,9 +55,13 @@ export default function Step2Details({ data, onChange }: Step2Props) {
         <Input
           label="Max members"
           type="number"
-          placeholder={data.plan === 'BAM' ? '12' : '100'}
+          min={1}
+          max={maxMembersLimit}
+          placeholder={String(maxMembersLimit)}
           value={data.maxMembers}
           onChange={e => onChange({ maxMembers: e.target.value === '' ? '' : Number(e.target.value) })}
+          error={maxMembersError}
+          hint={`${planName} supports up to ${maxMembersLimit} members.`}
         />
 
         <Input

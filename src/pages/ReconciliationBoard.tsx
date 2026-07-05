@@ -30,7 +30,7 @@ function fmtDate(iso: string | null) {
 function statusBadge(row: ReconciliationRow) {
   if (row.status === 'paid')    return <Badge variant="green" dot>Paid</Badge>
   if (row.status === 'partial') return <Badge variant="amber" dot>Partial</Badge>
-  if (row.status === 'overdue') return <Badge variant="danger" dot>{row.daysOverdue}d overdue</Badge>
+  if (row.status === 'overdue') return <Badge variant="danger" dot>{row.daysOverdue}overdue</Badge>
   return <Badge variant="muted" dot>Unpaid</Badge>
 }
 

@@ -33,6 +33,25 @@ interface PayoutBoardResponse {
   history: Array<Record<string, unknown>>
 }
 
+interface MemberPayoutResponse {
+  memberId: string
+  myPosition: number
+  myStatus: string
+  expectedPayout: number
+  circlePaidCount: number
+  circleTotalMembers: number
+  circleCollectionRatePercent: number
+  payoutQueue: Array<{
+    position: number
+    memberId: string
+    memberName: string
+    isRequestingMember: boolean
+    status: string
+    amount: number
+  }>
+  history: Array<Record<string, unknown>>
+}
+
 function initialsFromName(name: string): string {
   const parts = name.split(' ').filter(Boolean)
   const initials = parts.slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('')
@@ -102,6 +121,61 @@ export async function getPayoutCycleInfo(
       virtualAccount: entry.virtualAccountNumber,
       payoutAmount: entry.amount,
       status: toQueueStatus(entry.state),
+    })),
+  }
+}
+
+interface MemberPayoutResponse {
+  memberId: string
+  myPosition: number
+  myStatus: string
+  expectedPayout: number
+  circlePaidCount: number
+  circleTotalMembers: number
+  circleCollectionRatePercent: number
+  payoutQueue: Array<{
+    position: number
+    memberId: string
+    memberName: string
+    isRequestingMember: boolean
+    status: string
+    amount: number
+  }>
+  history: Array<Record<string, unknown>>
+}
+
+export async function getMemberPayoutInfo(
+  memberId: string,
+  token: string,
+): Promise<PayoutCycleInfo | null> {
+  const data = await apiGet<MemberPayoutResponse>(`/members/${memberId}/payout`, token)
+
+  const myEntry = data.payoutQueue.find(q => q.isRequestingMember)
+
+  return {
+    expectedPayoutAmount: data.expectedPayout,
+    currentRecipient: myEntry
+      ? {
+        position: myEntry.position,
+        memberId: myEntry.memberId,
+        name: myEntry.memberName,
+        initials: initialsFromName(myEntry.memberName),
+        virtualAccount: '',
+        payoutAmount: myEntry.amount,
+        status: toQueueStatus(myEntry.status),
+      }
+      : null,
+    membersCollected: data.circlePaidCount,
+    totalMembers: data.circleTotalMembers,
+    blockers: [],
+    queue: (data.payoutQueue ?? []).map(entry => ({
+      position: entry.position,
+      memberId: entry.memberId,
+      name: entry.memberName,
+      initials: initialsFromName(entry.memberName),
+      virtualAccount: '',
+      payoutAmount: entry.amount,
+      status: toQueueStatus(entry.status),
     })),
   }
 }

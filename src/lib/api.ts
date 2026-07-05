@@ -3,7 +3,7 @@ import type {
   Member,
   AdminMember,
   MemberStatus,
-  ContributionRecord,
+  ContributionsSummary,
   NotificationItem,
   PayoutRecord,
   AuthResponse,
@@ -17,23 +17,32 @@ import type {
   PayoutOrder,
   CircleStatus,
 } from '../types'
+import { createApiError, reportGlobalError } from './errors'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL
 
 async function apiRequest<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers ?? {}),
-    },
-    ...options,
-  })
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers ?? {}),
+      },
+      ...options,
+    })
+  } catch (error) {
+    reportGlobalError(error, 'Network request failed.')
+    throw error
+  }
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    const message = body?.message || response.statusText || 'Request failed'
-    throw new Error(message)
+    const error = createApiError(body, response.status, response.statusText)
+    reportGlobalError(error)
+    throw error
   }
 
   return response.json() as Promise<T>
@@ -99,7 +108,7 @@ export async function apiLogin(email: string, password: string): Promise<AuthRes
         email: string
         phone: string
       }
-      user?: {
+      member?: {
         id: string
         name: string
         email: string
@@ -113,7 +122,7 @@ export async function apiLogin(email: string, password: string): Promise<AuthRes
     body: JSON.stringify({ email, password }),
   })
 
-  const userData = response.data.admin || response.data.user
+  const userData = response.data.admin || response.data.member
   if (!userData) throw new Error('No user data in response')
 
   return {
@@ -216,7 +225,9 @@ export async function apiExportReports(adminId: string, token: string, circleId?
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    throw new Error(body?.message || response.statusText || 'Export failed')
+    const error = createApiError(body, response.status, response.statusText || 'Export failed')
+    reportGlobalError(error, 'Export failed')
+    throw error
   }
 
   const blob = await response.blob()
@@ -343,18 +354,7 @@ function memberStatusFromApi(value: number | string | null): MemberStatus | unde
   }
 }
 
-function contributionStatusFromApi(value: number | string | null): string {
-  switch (Number(value)) {
-    case 2:
-      return 'paid'
-    case 1:
-      return 'partial'
-    case 0:
-      return 'unpaid'
-    default:
-      return 'pending'
-  }
-}
+
 
 export async function apiGetCircle(id: string, token: string): Promise<Circle | null> {
   try {
@@ -519,37 +519,61 @@ export async function apiGetMemberPassport(id: string, token: string): Promise<s
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    throw new Error(body?.message || response.statusText || 'Passport request failed')
+    const error = createApiError(body, response.status, response.statusText || 'Passport request failed')
+    reportGlobalError(error, 'Passport request failed')
+    throw error
   }
 
   return response.text()
 }
 
-export async function apiGetMemberContributions(memberId: string, token: string): Promise<ContributionRecord[]> {
+
+export async function apiGetMemberContributions(memberId: string, token: string): Promise<ContributionsSummary> {
   const response = await apiRequest<{
     success: boolean
-    data: Array<{
-      id: string
-      cycleNumber: number
-      expectedAmount: number
-      paidAmount: number
-      balance: number
-      creditApplied: number
-      status: number
-      dueDate: string
-      paidAt: string
-    }>
-  }>(`/members/${memberId}/contributions`, {}, token)
+    data: {
+      memberId: string
+      circleName: string
+      totalPayments: number
+      onTimeCount: number
+      resolvedCycleCount: number
+      onTimeRatePercent: number
+      totalContributed: number
+      circlePaidCount: number
+      circleTotalMembers: number
+      circleCollectionRatePercent: number
+      history: Array<{
+        cycleNumber: number
+        datePaid: string | null
+        dueDate: string
+        status: string
+        amount: number
+      }>
+    }
+  }>(`/members/${memberId}/contributions/summary`, {}, token)
 
-  return response.data.map(item => ({
-    id: item.id,
-    cycle: item.cycleNumber,
-    amount: item.paidAmount,
-    status: contributionStatusFromApi(item.status),
-    dueDate: item.dueDate,
-    paidAt: item.paidAt,
-    createdAt: item.paidAt,
-  }))
+  const data = response.data
+
+  return {
+    memberId: data.memberId,
+    circleName: data.circleName,
+    totalPayments: data.totalPayments,
+    onTimeCount: data.onTimeCount,
+    resolvedCycleCount: data.resolvedCycleCount,
+    onTimeRatePercent: data.onTimeRatePercent,
+    totalContributed: data.totalContributed,
+    circlePaidCount: data.circlePaidCount,
+    circleTotalMembers: data.circleTotalMembers,
+    circleCollectionRatePercent: data.circleCollectionRatePercent,
+    history: data.history.map(item => ({
+      id: `cycle-${item.cycleNumber}`,
+      cycle: item.cycleNumber,
+      amount: item.amount,
+      status: item.status,
+      dueDate: item.dueDate,
+      paidAt: item.datePaid ?? undefined,
+    })),
+  }
 }
 
 export async function apiGetMemberNotifications(memberId: string, token: string, page = 1, pageSize = 20): Promise<NotificationItem[]> {
@@ -562,13 +586,13 @@ export async function apiGetMemberNotifications(memberId: string, token: string,
       page?: number
       pageSize?: number
     }
-  }>(`/members/${memberId}/notifications?${params.toString()}`, {}, token)
+  }>(`/members/${memberId}/notification-center?${params.toString()}`, {}, token)
 
   return Array.isArray(response.data) ? response.data : response.data.items ?? []
 }
 
-export async function apiMarkMemberNotificationsRead(memberId: string, token: string): Promise<boolean> {
-  const response = await apiRequest<{ success: boolean; data: boolean }>(`/members/${memberId}/notifications/read`, {
+export async function apiMarkMemberNotificationsRead(memberId: string, token: string, notificationId: string): Promise<boolean> {
+  const response = await apiRequest<{ success: boolean; data: boolean }>(`/members/${memberId}/notification-center/${notificationId}/read`, {
     method: 'PATCH',
   }, token)
 
@@ -622,9 +646,9 @@ export async function apiAddMember(
   const response = await apiRequest<{
     success: boolean
     data: Member
-  }>('/circles/members', {
+  }>(`/circles/${circleId}/members`, {
     method: 'POST',
-    body: JSON.stringify({ circleId, ...data }),
+    body: JSON.stringify(data),
   }, token)
 
   return response.data
