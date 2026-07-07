@@ -64,6 +64,12 @@ export interface PayoutRecord {
   recipient?: string
 }
 
+export interface PayoutAccount {
+  bankCode: string
+  bankLabel: string
+  accountNumber: string
+}
+
 export interface Circle {
   id: string
   name: string

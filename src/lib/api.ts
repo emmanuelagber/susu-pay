@@ -6,6 +6,7 @@ import type {
   ContributionsSummary,
   NotificationItem,
   PayoutRecord,
+  PayoutAccount,
   AuthResponse,
   AuthUser,
   AuthTokens,
@@ -527,6 +528,32 @@ export async function apiGetMemberPassport(id: string, token: string): Promise<s
   return response.text()
 }
 
+export async function apiGetMemberPayoutAccount(memberId: string, token: string): Promise<PayoutAccount | null> {
+  try {
+    const response = await apiRequest<{ success: boolean; data: PayoutAccount | null }>(
+      `/members/${memberId}/payout-account`, {}, token,
+    )
+    return response.data ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function apiSetMemberPayoutAccount(
+  memberId: string,
+  data: { bankCode: string; bankLabel: string; accountNumber: string },
+  token: string,
+): Promise<PayoutAccount> {
+  const response = await apiRequest<{ success: boolean; data: PayoutAccount; message?: string; errors?: unknown }>(
+    `/members/${memberId}/payout-account`,
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+    token,
+  )
+  return assertSuccess(response).data
+}
 
 export async function apiGetMemberContributions(memberId: string, token: string): Promise<ContributionsSummary> {
   const response = await apiRequest<{
