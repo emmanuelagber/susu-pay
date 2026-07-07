@@ -2,7 +2,7 @@
 import Badge from '../../components/ui/Badge'
 import { CircleLogo } from '../../components/ui/Icons';
 function Shimmer({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
-  return <div className={`animate-pulse rounded-md bg-border/60 ${className}`} style={style} />
+  return <div className={`skeleton-shimmer rounded-md ${className}`} style={style} />
 }
 
 function StatBoxSkeleton() {

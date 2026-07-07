@@ -151,7 +151,7 @@ export default function Overview() {
       {/* Chart + Circles */}
       <div className="grid lg:grid-cols-5 gap-4">
         {/* Area chart */}
-        <div className="lg:col-span-3 bg-surface rounded-xl border border-border p-5">
+        <div className="lg:col-span-3 bg-surface rounded-xl border border-border p-5 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-sm font-semibold text-text-base">Contribution trends</h2>
@@ -189,7 +189,7 @@ export default function Overview() {
         </div>
 
         {/* Active circles list */}
-        <div className="lg:col-span-2 bg-surface rounded-xl border border-border p-5 flex flex-col">
+        <div className="lg:col-span-2 bg-surface rounded-xl border border-border p-5 flex flex-col min-w-0">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-text-base">Active circles</h2>
             {hasMoreCircles && (

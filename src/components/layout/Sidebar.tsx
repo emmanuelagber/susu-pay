@@ -29,8 +29,8 @@ export default function Sidebar() {
 
   const unreadCount = data?.unreadCount ?? 0
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 

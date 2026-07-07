@@ -75,6 +75,12 @@ export default function Login() {
               autoComplete="current-password"
             />
 
+            <div className="flex justify-end -mt-2">
+              <Link to="/forgot-password" className="text-xs text-blue-accent hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+
             {error && (
               <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">
                 {error}
@@ -98,16 +104,6 @@ export default function Login() {
             <Link to="/register" className="text-blue-accent hover:underline">
               Register here.
             </Link>
-          </p>
-          <p className="text-xs text-text-ghost text-center mt-3">
-            Demo: use any email to sign in as admin,{' '}
-            <span
-              className="text-blue-accent cursor-pointer hover:underline"
-              onClick={() => setEmail('chidi@example.com')}
-            >
-              chidi@example.com
-            </span>{' '}
-            for member view.
           </p>
         </div>
       </div>
