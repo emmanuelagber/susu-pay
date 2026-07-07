@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(curl -s \"https://susucircle.onrender.com/api/members/ebd91642-1dd5-40ba-9a93-41a0a753ec82/payout-account\" -w \"\\\\nHTTP %{http_code}\\\\n\")"
-    ]
-  }
-}
