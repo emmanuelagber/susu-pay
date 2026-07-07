@@ -764,8 +764,8 @@ export default function MemberDashboard() {
 
   const unreadCount = recentNotifs.filter(n => !n.isRead).length
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 

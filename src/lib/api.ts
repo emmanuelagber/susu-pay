@@ -653,3 +653,54 @@ export async function apiAddMember(
 
   return response.data
 }
+
+// lib/api/auth.ts (or wherever your other apiRequest-based functions live)
+
+function assertSuccess<T extends { success: boolean; message?: string; errors?: unknown }>(response: T): T {
+  if (!response.success) {
+    const error = createApiError(response, 200)
+    reportGlobalError(error)
+    throw error
+  }
+  return response
+}
+
+export async function apiForgotPassword(email: string): Promise<boolean> {
+  const response = await apiRequest<{ success: boolean; data?: boolean; message?: string; errors?: unknown }>(
+    '/auth/forgot-password',
+    {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    },
+  )
+  return assertSuccess(response).success
+}
+
+export async function apiResetPassword(params: {
+  email: string
+  code: string
+  newPassword: string
+  confirmNewPassword: string
+}): Promise<boolean> {
+  const response = await apiRequest<{ success: boolean; data?: boolean; message?: string; errors?: unknown }>(
+    '/auth/reset-password',
+    {
+      method: 'POST',
+      body: JSON.stringify(params),
+    },
+  )
+  return assertSuccess(response).success
+}
+
+export async function apiLogout(refreshToken: string): Promise<boolean> {
+  const response = await apiRequest<{ success: boolean; data?: boolean; message?: string; errors?: unknown }>(
+    '/auth/logout',
+    {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    },
+  )
+  return assertSuccess(response).success
+}
+
+
