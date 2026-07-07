@@ -20,6 +20,7 @@ import {
 import type { ContributionsSummary, NotificationItem, Circle, Member } from '../../types'
 import type { PayoutCycleInfo, PayoutQueueEntry } from '../../types/sprint2'
 import MemberDashboardSkeleton from './MemberDashboardSkeleton'
+import PayoutAccountCard from './PayoutAccountCard'
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -458,9 +459,11 @@ function statusBadgeVariant(status: PayoutQueueEntry['status']): 'green' | 'blue
 
 function PayoutTab({
   memberId,
+  token,
   payoutInfo,
 }: {
   memberId: string
+  token: string
   payoutInfo: PayoutCycleInfo | null | undefined
 }) {
   const queue = payoutInfo?.queue ?? []
@@ -532,6 +535,9 @@ function PayoutTab({
           )}
         </div>
       </div>
+
+      {/* Payout account */}
+      <PayoutAccountCard memberId={memberId} token={token} />
 
       {/* Info callout */}
       {payoutPos && (
@@ -896,9 +902,10 @@ export default function MemberDashboard() {
         {tab === 'contributions' && (
          <ContributionsTab summary={contributionsSummary} />
         )}
-        {tab === 'payout' && (
+        {tab === 'payout' && accessToken && (
           <PayoutTab
             memberId={memberId}
+            token={accessToken}
             payoutInfo={payoutInfo}
           />
         )}
