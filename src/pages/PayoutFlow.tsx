@@ -1,9 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  getPayoutCycleInfo,
-  triggerPayout,
-  getPayoutHistory,
-} from "../api/payouts";
+import { getPayoutCycleInfo, getPayoutHistory } from "../api/payouts";
+import { disburseCollection } from "../api/collection";
 import { useAuth } from "../context/AuthContext";
 import { useSelectedCircle } from "../hooks/useSelectedCircle";
 import CircleSelector from "../components/ui/CircleSelector";
@@ -158,10 +155,23 @@ export default function PayoutFlow() {
   });
 
   const payoutMutation = useMutation({
-    mutationFn: () => triggerPayout(circleId, accessToken!),
+    mutationFn: () => {
+      const recipient = cycleInfo?.currentRecipient;
+      if (!recipient) throw new Error("No current recipient.");
+      return disburseCollection(
+        circleId,
+        {
+          memberId: recipient.memberId,
+          amount: cycleInfo.expectedPayoutAmount,
+          narration: `Cycle ${cycleInfo.cycleNumber ?? ""} payout`.trim(),
+        },
+        accessToken!,
+      );
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["payoutCycle", circleId] });
       qc.invalidateQueries({ queryKey: ["payoutHistory", circleId] });
+      qc.invalidateQueries({ queryKey: ["collection-accounts", circleId] });
     },
   });
 
@@ -294,8 +304,8 @@ export default function PayoutFlow() {
             {payoutMutation.isSuccess && (
               <div className="bg-green-accent/10 border border-green-accent/25 rounded-lg px-3.5 py-2.5 mb-4">
                 <p className="text-xs text-green-accent">
-                  Payout triggered — processing now. You'll be notified when
-                  complete.
+                  Disbursed from the circle pool — processing now. You'll be
+                  notified when complete.
                 </p>
               </div>
             )}

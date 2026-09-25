@@ -111,6 +111,63 @@ export interface CircleSettingsPatch {
   status?: 'active' | 'paused'
 }
 
+export interface MemberCircle {
+  circleId: string
+  circleName: string
+  description?: string
+  plan: string
+  contributionAmount: number
+  frequency: string
+  maxMembers: number
+  currentCycle: number
+  status: string
+  payoutOrder: string
+  startDate: string
+  nextContributionDate?: string
+  memberCount: number
+  adminId: string
+  requestingMemberPayoutPosition: number
+  requestingMemberStatus: string
+}
+
+export interface CollectionAccount {
+  id: string
+  accountNumber: string
+  accountName?: string
+  bankName?: string
+  balance: number
+  isActive: boolean
+  createdAt?: string
+}
+
+export interface MemberAccount {
+  memberId: string
+  name: string
+  initials: string
+  payoutPosition: number
+  virtualAccountNumber: string
+  virtualAccountBank?: string
+  payoutAccountNumber?: string
+  payoutBankName?: string
+  payoutReady: boolean
+  isActive: boolean
+}
+
+export interface DisburseRequest {
+  memberId: string
+  amount: number
+  narration?: string
+}
+
+/** Sweep/disburse responses aren't documented in Swagger — keep the raw payload alongside what we could read. */
+export interface CollectionActionResult {
+  message?: string
+  amount?: number
+  count?: number
+  reference?: string
+  raw: unknown
+}
+
 export interface NotificationFeedItem {
   id: string
   type: NotificationType

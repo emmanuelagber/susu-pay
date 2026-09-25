@@ -7,6 +7,9 @@ import Overview from "./pages/Overview";
 import Members from "./pages/Members";
 import Reports from "./pages/Reports";
 import CreateCircle from "./pages/circle/CreateCircle";
+import Circles from "./pages/circle/Circles";
+import CircleDetail from "./pages/circle/CircleDetail";
+import MemberDetail from "./pages/MemberDetail";
 import MemberDashboard from "./pages/member/MemberDashboard";
 import ReconciliationBoard from "./pages/ReconciliationBoard";
 import ManualReconciliation from "./pages/ManualReconciliation";
@@ -93,8 +96,11 @@ export default function App() {
           <Route index element={<Navigate to="/overview" replace />} />
           <Route path="overview" element={<Overview />} />
           <Route path="members" element={<Members />} />
+          <Route path="members/:memberId" element={<MemberDetail />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="circles" element={<Circles />} />
           <Route path="circles/new" element={<CreateCircle />} />
+          <Route path="circles/:circleId" element={<CircleDetail />} />
           <Route
             path="circles/:circleId/settings"
             element={<CircleSettings />}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiAddMember, apiGetAdminMembers, apiGetCircles } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
@@ -15,10 +15,13 @@ function fmt(n: number) {
   return '₦' + n.toLocaleString('en-NG')
 }
 
-function MemberRow({ member, index, circleName }: { member: Member; index: number; circleName?: string }) {
+function MemberRow({ member, index, circleName, onOpen }: { member: Member; index: number; circleName?: string; onOpen: () => void }) {
   const status = member.status ?? 'pending'
   return (
-    <tr className="border-b border-border last:border-0 hover:bg-surface-alt/50 transition-colors">
+    <tr
+      onClick={onOpen}
+      className="border-b border-border last:border-0 hover:bg-surface-alt/50 transition-colors cursor-pointer"
+    >
       <td className="py-3.5 pl-5 pr-4">
         <div className="flex items-center gap-3">
           <Avatar initials={member.initials} size="sm" index={index} />
@@ -60,6 +63,7 @@ function MemberRow({ member, index, circleName }: { member: Member; index: numbe
 export default function Members() {
   const { user, accessToken } = useAuth()
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all')
@@ -302,7 +306,13 @@ export default function Members() {
                 </tr>
               ) : (
                 filtered.map((member, i) => (
-                  <MemberRow key={member.id} member={member} circleName={member.circleName} index={i} />
+                  <MemberRow
+                    key={member.id}
+                    member={member}
+                    circleName={member.circleName}
+                    index={i}
+                    onOpen={() => navigate(`/members/${member.id}`)}
+                  />
                 ))
               )}
             </tbody>

@@ -67,7 +67,11 @@ export interface PayoutRecord {
 export interface PayoutAccount {
   bankCode: string
   bankLabel: string
+  /** Masked by the API on reads, e.g. "****7106". */
   accountNumber: string
+  memberId?: string
+  /** Name returned by the bank's account lookup. */
+  resolvedAccountName?: string
 }
 
 export interface Circle {
