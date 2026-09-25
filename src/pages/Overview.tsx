@@ -36,8 +36,12 @@ function CollectionBar({ rate }: { rate: number }) {
 
 function CircleRow({ circle }: { circle: OverviewCircle }) {
   const isActive = circle.status.toLowerCase() === 'active'
+  const navigate = useNavigate()
   return (
-    <div className="flex items-center gap-4 py-3.5 border-b border-border last:border-0">
+    <div
+      onClick={() => navigate(`/circles/${circle.id}`)}
+      className="flex items-center gap-4 py-3.5 border-b border-border last:border-0 cursor-pointer hover:bg-surface-alt/40 -mx-2 px-2 rounded-lg transition-colors"
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <p className="text-sm font-medium text-text-base truncate">{circle.name}</p>

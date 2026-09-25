@@ -10,6 +10,7 @@ import { getNotifications } from '../../api/notifications'
 
 const NAV_ITEMS = [
   { label: 'Overview',        path: '/overview',        Icon: GridIcon },
+  { label: 'Circles',         path: '/circles',         Icon: CircleLogo },
   { label: 'Members',         path: '/members',         Icon: UsersIcon },
   { label: 'Reconciliation',  path: '/reconciliation',  Icon: ReceiptIcon },
   { label: 'Payouts',         path: '/payouts',         Icon: WalletIcon },

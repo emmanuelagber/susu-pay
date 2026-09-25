@@ -77,6 +77,8 @@ export default function CircleSettings() {
     mutationFn: (p: CircleSettingsPatch) => updateCircleSettings(circleId, p, accessToken!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['circleSettings', circleId] })
+      qc.invalidateQueries({ queryKey: ['circle', circleId] })
+      qc.invalidateQueries({ queryKey: ['circles'] })
       setDirty(false)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 3000)
@@ -110,7 +112,7 @@ export default function CircleSettings() {
     <div className="p-6 max-w-[720px] mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Link to="/overview" className="text-text-ghost hover:text-text-base transition-colors">
+        <Link to={`/circles/${circleId}`} className="text-text-ghost hover:text-text-base transition-colors">
           <ArrowLeftIcon className="w-4 h-4" />
         </Link>
         <div>
@@ -261,7 +263,12 @@ export default function CircleSettings() {
           variant="primary"
           disabled={!dirty || updateMutation.isPending}
           loading={updateMutation.isPending}
-          onClick={() => updateMutation.mutate(form)}
+          onClick={() => {
+            // Only send status when the admin toggled it (a pending circle shows as "active" in the form).
+            const initialStatus = settings.status === 'paused' ? 'paused' : 'active'
+            const { status, ...fields } = form
+            updateMutation.mutate(status !== initialStatus ? form : fields)
+          }}
         >
           Save changes
         </Button>
